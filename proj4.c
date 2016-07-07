@@ -29,9 +29,7 @@ static zend_function_entry proj4_functions[] = {
 };
 
 zend_module_entry proj4_module_entry = {
-#if ZEND_MODULE_API_NO >= 20010901
     STANDARD_MODULE_HEADER,
-#endif
     PHP_PROJ4_EXTNAME,
     proj4_functions,
     PHP_MINIT(proj4),
@@ -39,9 +37,7 @@ zend_module_entry proj4_module_entry = {
     PHP_RINIT(proj4),
     NULL,
     PHP_MINFO(proj4),
-#if ZEND_MODULE_API_NO >= 20010901
     PHP_PROJ4_VERSION,
-#endif
     STANDARD_MODULE_PROPERTIES
 };
 
@@ -168,8 +164,8 @@ ZEND_FUNCTION(pj_transform) {
         }
 
         for (zend_hash_internal_pointer_reset_ex(x_array, &x_position), zend_hash_internal_pointer_reset_ex(y_array, &y_position);
-            NULL != (x_data = zend_hash_get_current_data_ex(x_array, &x_position)) &&
-            NULL != (y_data = zend_hash_get_current_data_ex(y_array, &y_position));
+            (x_data = zend_hash_get_current_data_ex(x_array, &x_position)) != NULL &&
+            (y_data = zend_hash_get_current_data_ex(y_array, &y_position)) != NULL;
             zend_hash_move_forward_ex(x_array, &x_position),
             zend_hash_move_forward_ex(y_array, &y_position),
             current_array_position++) {
@@ -212,7 +208,7 @@ ZEND_FUNCTION(pj_transform) {
         p = pj_transform(srcProj, tgtProj, max_count, 0, x_input_array, y_input_array, z_input_array);
         if (p == 0) {
             zval x_array_element, y_array_element, z_array_element;
-
+            
             array_init(&x_array_element);
             array_init(&y_array_element);
             array_init(&z_array_element);
@@ -352,6 +348,10 @@ ZEND_FUNCTION(pj_transform_point) {
     }
 }
 
+/*
+ * @param resource projection
+ * @return boolean
+ */
 ZEND_FUNCTION(pj_is_latlong) {
     zval *zpj;
     projPJ pj;
