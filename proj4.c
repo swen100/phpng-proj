@@ -83,12 +83,12 @@ ZEND_GET_MODULE(proj4)
 ZEND_FUNCTION(pj_init_plus) {
     projPJ pj_merc;
     char *definition;
-    int definition_length;
+    size_t definition_length;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &definition, &definition_length) == FAILURE) {
         RETURN_FALSE;
     }
-
+    
     pj_merc = pj_init_plus(definition);
     if (pj_merc == NULL) {
         RETURN_FALSE;
@@ -100,7 +100,7 @@ ZEND_FUNCTION(pj_init_plus) {
 
 ZEND_FUNCTION(pj_transform) {
     int p;
-    long point_count, point_offset;
+    zend_long point_count, point_offset;
     zval *zx, *zy, *zz;
     zval *zpj_latlong, *zpj_merc;
     projPJ srcProj, tgtProj;
@@ -389,7 +389,7 @@ ZEND_FUNCTION(pj_is_geocent) {
 }
 
 ZEND_FUNCTION(pj_get_def) {
-    long options = 0;
+    zend_long options = 0;
     char *result;
     zval *zpj;
     projPJ pj;
@@ -444,7 +444,7 @@ ZEND_FUNCTION(pj_get_errno_ref) {
 }
 
 ZEND_FUNCTION(pj_strerrno) {
-    long error_code;
+    zend_long error_code;
     char *result;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &error_code) == FAILURE) {

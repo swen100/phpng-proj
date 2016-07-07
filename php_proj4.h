@@ -8,7 +8,7 @@
 #ifndef PHP_PROJ4_H
 #define PHP_PROJ4_H 1
 
-#define PHP_PROJ4_VERSION "4.7"
+#define PHP_PROJ4_VERSION "4.8"
 #define PHP_PROJ4_EXTNAME "proj.4"
 
 #define PHP_PROJ4_RES_NAME "Proj.4"
