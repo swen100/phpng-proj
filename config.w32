@@ -1,0 +1,11 @@
+ARG_WITH("proj4", "PROJ4 module", "no");
+
+if (PHP_PROJ4 == "yes") {
+    CHECK_HEADER_ADD_INCLUDE("proj4/proj_api.h", "CFLAGS_PROJ4", PHP_PROJ4 + "\\include", null, true);
+    CHECK_LIB("proj.lib", "proj4", PHP_PROJ4 + "\\lib")
+    
+	EXTENSION("proj4", "proj4.c");
+	AC_DEFINE('HAVE_PROJ4', 1, 'Have proj4 module');
+    
+    PHP_INSTALL_HEADERS("ext/proj4/", "php_proj4.h");
+}
