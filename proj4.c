@@ -314,9 +314,9 @@ static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y,
         y *= DEG_TO_RAD;
     }
     
-    php_printf("x: %f \n", x);
-    php_printf("y: %f \n", y);
-    php_printf("z: %f \n", z);
+//    php_printf("x: %f \n", x);
+//    php_printf("y: %f \n", y);
+//    php_printf("z: %f \n", z);
                 
     p = pj_transform(srcProj, tgtProj, 1, 0, &x, &y, &z);
 
@@ -328,9 +328,12 @@ static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y,
         }
 
         array_init(&return_value);
-        add_index_double(&return_value, 0, x);
-        add_index_double(&return_value, 1, y);
-        add_index_double(&return_value, 2, z);
+        add_assoc_double(&return_value, "x", x);
+        add_assoc_double(&return_value, "y", y);
+        add_assoc_double(&return_value, "z", z);
+//        add_index_double(&return_value, 0, x);
+//        add_index_double(&return_value, 1, y);
+//        add_index_double(&return_value, 2, z);
     }
 
     return return_value;
@@ -359,9 +362,9 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
         y *= DEG_TO_RAD;
     }
     
-    php_printf("x: %f \n", x);
-    php_printf("y: %f \n", y);
-    php_printf("z: %f \n", z);
+//    php_printf("x: %f \n", x);
+//    php_printf("y: %f \n", y);
+//    php_printf("z: %f \n", z);
                 
     p = pj_transform(srcProj, tgtProj, 1, 0, &x, &y, &z);
 
@@ -373,9 +376,12 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
         }
 
         array_init(&return_value);
-        add_index_double(&return_value, 0, x);
-        add_index_double(&return_value, 1, y);
-        add_index_double(&return_value, 2, z);
+//        add_index_double(&return_value, 0, x);
+//        add_index_double(&return_value, 1, y);
+//        add_index_double(&return_value, 2, z);
+        add_assoc_double(&return_value, "x", x);
+        add_assoc_double(&return_value, "y", y);
+        add_assoc_double(&return_value, "z", z);
     }
 
     return return_value;
@@ -384,7 +390,7 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
 static zval transformCoordArray_static(zval *xy_arr_p, projPJ srcProj, projPJ tgtProj, projPJ wgsProj, zval *projViaWgs84 )
 {
     zval coord;
-    zval *x, *y, *z, *t;
+    zval *x, *y, z, *t;
     
     HashTable *xyz_hash = Z_ARR_P(xy_arr_p);
     array_init(&coord);
@@ -393,26 +399,26 @@ static zval transformCoordArray_static(zval *xy_arr_p, projPJ srcProj, projPJ tg
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
         
         if( NULL == (t = zend_hash_index_find(xyz_hash, 2)) ) {
-            ZVAL_DOUBLE(z, 0.0);
-            //convert_to_double_ex(z);
-            //Z_DVAL_P(z) = 0;
-            php_printf("z: %f \n", Z_DVAL_P(z));
-            //RETURN_FALSE;
-        } else {
-            //convert_to_double_ex(t);
-            //ZVAL_COPY_VALUE(t, z);
-            php_printf("z: %f \n", Z_DVAL_P(z));
-        }
+                //php_printf("no value for z found \n");
+                ZVAL_DOUBLE(&z, 0.0);
+                //tellMeWhatYouAre(&z);
+            } else {
+                //php_printf("value for z found \n");
+                ZVAL_COPY_VALUE(&z, t);
+                zval_ptr_dtor(t);
+                convert_to_double_ex(&z);
+                //tellMeWhatYouAre(&z);
+            }
         
         convert_to_double_ex(x);
         convert_to_double_ex(y);
         
         if (projViaWgs84) {
-            php_printf("transformiere über WGS84 \n");
-            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL_P(z) );
+            //php_printf("transformiere über WGS84 \n");
+            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
         } else {
-            php_printf("transformiere direkt \n");
-            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL_P(z));
+            //php_printf("transformiere direkt \n");
+            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
         }
     }
     
@@ -486,7 +492,7 @@ ZEND_FUNCTION(pj_transform_array) {
             if( NULL == (t = zend_hash_index_find(xyz_hash, 2)) ) {
                 //php_printf("no value for z found \n");
                 ZVAL_DOUBLE(&z, 0.0);
-                tellMeWhatYouAre(&z);
+                //tellMeWhatYouAre(&z);
             } else {
                 //php_printf("value for z found \n");
                 ZVAL_COPY_VALUE(&z, t);
