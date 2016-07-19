@@ -387,13 +387,13 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
     return return_value;
 }
 
-static zval transformCoordArray_static(zval *xy_arr_p, projPJ srcProj, projPJ tgtProj, projPJ wgsProj, zval *projViaWgs84 )
+static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, projPJ wgsProj, zval xy_arr, zend_bool projViaWgs84 )
 {
-    zval coord;
+    //zval coord;
     zval *x, *y, z, *t;
     
-    HashTable *xyz_hash = Z_ARR_P(xy_arr_p);
-    array_init(&coord);
+    HashTable *xyz_hash = Z_ARR_P(&xy_arr);
+    //array_init(&coord);
     
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) && 
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
@@ -415,14 +415,17 @@ static zval transformCoordArray_static(zval *xy_arr_p, projPJ srcProj, projPJ tg
         
         if (projViaWgs84) {
             //php_printf("transformiere über WGS84 \n");
-            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
+//            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
+            return projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
         } else {
             //php_printf("transformiere direkt \n");
-            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+//            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+            return projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
         }
     }
     
-    return coord;
+    zval_ptr_dtor(&z);
+    //return coord;
 }
 
 
@@ -433,10 +436,10 @@ static zval transformCoordArray_static(zval *xy_arr_p, projPJ srcProj, projPJ tg
  */
 ZEND_FUNCTION(pj_transform_array) {
     /* method-params */
-    zval *x, *y, z, *t;
+//    zval *x, *y, z, *t;
     zval *xyz_arr_p, xyz_arr, *zv, coord;
     zend_string *delimiter;
-    HashTable *xyz_hash;
+//    HashTable *xyz_hash;
     
     /* user-params */
     zval *srcDefn, *tgtDefn;
@@ -468,7 +471,7 @@ ZEND_FUNCTION(pj_transform_array) {
     }
     
     array_init(return_value);
-    ZVAL_DOUBLE(&z, 0.0);
+//    ZVAL_DOUBLE(&z, 0.0);
     delimiter = zend_string_init(" ", 1, 0);
     HashTable *pts_hash = Z_ARR_P(xyz_arr_p);
     ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
@@ -484,6 +487,7 @@ ZEND_FUNCTION(pj_transform_array) {
             RETURN_FALSE;
         }
 
+        /*
         xyz_hash = Z_ARR_P(&xyz_arr);
 
         if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) && 
@@ -512,10 +516,13 @@ ZEND_FUNCTION(pj_transform_array) {
             }
             add_next_index_zval(return_value, &coord );
         }
-
+        */
+        coord = transformCoordArray_static(srcProj, tgtProj, wgsProj, xyz_arr, projViaWgs84 );
+        add_next_index_zval(return_value, &coord );
+        
     } ZEND_HASH_FOREACH_END();
     
-    zval_ptr_dtor(&z);
+//    zval_ptr_dtor(&z);
     zend_string_release(delimiter);
     zval_ptr_dtor(&xyz_arr);
     
@@ -594,11 +601,11 @@ ZEND_FUNCTION(pj_transform_string) {
     /* coord-params */
     zval pts_arr, xyz_arr;
     zend_string *delimiter, *delimiter2;
-    HashTable *pts_hash, *xyz_hash;
+    HashTable *pts_hash /*, *xyz_hash*/;
     zval coord;
     zval *zv;
     
-    zval *x, *y, z, *t;
+//    zval *x, *y, z, *t;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rrS", &srcDefn, &tgtDefn, &str) == FAILURE) {
         RETURN_FALSE;
@@ -646,6 +653,7 @@ ZEND_FUNCTION(pj_transform_string) {
                 RETURN_FALSE;
             }
 
+            /*
             xyz_hash = Z_ARR_P(&xyz_arr);
 
             if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) && 
@@ -674,6 +682,9 @@ ZEND_FUNCTION(pj_transform_string) {
                 }
                 add_next_index_zval(return_value, &coord );
             }
+            */
+            coord = transformCoordArray_static(srcProj, tgtProj, wgsProj, xyz_arr, projViaWgs84 );
+            add_next_index_zval(return_value, &coord );
             
         } ZEND_HASH_FOREACH_END();
     }
