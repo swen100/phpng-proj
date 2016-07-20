@@ -97,6 +97,8 @@ ZEND_FUNCTION(pj_init_plus) {
 
 static void tellMeWhatYouAre(zval *arg)
 {
+    zval *zv;
+    
     php_printf("\nThe Element is of type: ");
     switch (Z_TYPE_P(arg)) {
         case IS_NULL:
@@ -119,7 +121,11 @@ static void tellMeWhatYouAre(zval *arg)
             php_printf("");
             break;
         case IS_ARRAY:
-            php_printf("Array");
+            php_printf("Array, with this content:\n");
+            HashTable *hash = Z_ARR_P(arg);
+            ZEND_HASH_FOREACH_VAL(hash, zv) {
+                tellMeWhatYouAre(zv);
+            } ZEND_HASH_FOREACH_END();
             break;
         default:
             php_printf("Unknown");
@@ -389,11 +395,9 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
 
 static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, projPJ wgsProj, zval xy_arr, zend_bool projViaWgs84 )
 {
-    //zval coord;
-    zval *x, *y, z, *t;
+    zval *x, *y, z, *t, empty_arr;
     
     HashTable *xyz_hash = Z_ARR_P(&xy_arr);
-    //array_init(&coord);
     
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) && 
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
@@ -414,35 +418,35 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, projPJ wg
         convert_to_double_ex(y);
         
         if (projViaWgs84) {
-            //php_printf("transformiere über WGS84 \n");
-//            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
             return projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
         } else {
-            //php_printf("transformiere direkt \n");
-//            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
             return projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
         }
     }
     
-    zval_ptr_dtor(&z);
-    //return coord;
+    array_init(&empty_arr);
+    add_assoc_double(&empty_arr, "x", 0);
+    add_assoc_double(&empty_arr, "y", 0);
+    add_assoc_double(&empty_arr, "z", 0);
+    return empty_arr;
 }
 
 
 /**
  * 
- * @param execute_data
- * @param return_value
+ * @param object srcDefn
+ * @param object tgtDefn
+ * @param array points-array
+ * @return array ('x' => x, 'y' => y 'z' => z)
  */
 ZEND_FUNCTION(pj_transform_array) {
+    
     /* method-params */
-//    zval *x, *y, z, *t;
-    zval *xyz_arr_p, xyz_arr, *zv, coord;
+    zval xyz_arr, *zv, coord;
     zend_string *delimiter;
-//    HashTable *xyz_hash;
     
     /* user-params */
-    zval *srcDefn, *tgtDefn;
+    zval *srcDefn, *tgtDefn, *xyz_arr_p;
     
     /* projection-params */
     projPJ wgsProj, srcProj, tgtProj;
@@ -471,52 +475,20 @@ ZEND_FUNCTION(pj_transform_array) {
     }
     
     array_init(return_value);
-//    ZVAL_DOUBLE(&z, 0.0);
     delimiter = zend_string_init(" ", 1, 0);
     HashTable *pts_hash = Z_ARR_P(xyz_arr_p);
     ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-            
-        convert_to_string_ex(zv);
-        //php_printf("zv: %s \n", Z_STRVAL_P(zv));
-
-        // in x,y,z zerteilen
+        
         array_init(&xyz_arr);
-        php_explode(delimiter, Z_STR_P(zv), &xyz_arr, LONG_MAX);
-
-        if (Z_TYPE(xyz_arr) != IS_ARRAY) {
-            RETURN_FALSE;
+        
+        // in x,y,z-Array zerteilen
+        if (Z_TYPE_P(zv) != IS_ARRAY) {
+            convert_to_string_ex(zv);
+            php_explode(delimiter, Z_STR_P(zv), &xyz_arr, LONG_MAX);
+        } else {
+            ZVAL_COPY_VALUE(&xyz_arr, zv);
         }
-
-        /*
-        xyz_hash = Z_ARR_P(&xyz_arr);
-
-        if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) && 
-            NULL != (y = zend_hash_index_find(xyz_hash, 1)) ) {
-
-            if( NULL == (t = zend_hash_index_find(xyz_hash, 2)) ) {
-                //php_printf("no value for z found \n");
-                ZVAL_DOUBLE(&z, 0.0);
-                //tellMeWhatYouAre(&z);
-            } else {
-                //php_printf("value for z found \n");
-                ZVAL_COPY_VALUE(&z, t);
-                zval_ptr_dtor(t);
-                convert_to_double_ex(&z);
-                //tellMeWhatYouAre(&z);
-            }
-            convert_to_double_ex(x);
-            convert_to_double_ex(y);
-
-            if (projViaWgs84) {
-                //php_printf("transformiere über WGS84 \n");
-                coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
-            } else {
-                //php_printf("transformiere direkt \n");
-                coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-            }
-            add_next_index_zval(return_value, &coord );
-        }
-        */
+        
         coord = transformCoordArray_static(srcProj, tgtProj, wgsProj, xyz_arr, projViaWgs84 );
         add_next_index_zval(return_value, &coord );
         
@@ -531,62 +503,11 @@ ZEND_FUNCTION(pj_transform_array) {
     }
 }
 
-
-/*ZEND_FUNCTION(pj_test_z) {
-    zval z, *t;
-    zval *xyz_arr_p;
-    
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", &xyz_arr_p) == FAILURE) {
-        RETURN_FALSE;
-    }
-    
-    ZVAL_DOUBLE(&z, 0.0);
-    
-    HashTable *xyz_hash = Z_ARR_P(xyz_arr_p);
-    t = zend_hash_index_find(xyz_hash, 2);
-    if( t == NULL ) {
-        php_printf("no value for z found \n");
-        tellMeWhatYouAre(&z);
-    } else {
-        php_printf("value for z found \n");
-        tellMeWhatYouAre(t);
-        ZVAL_COPY_VALUE(&z, t);
-        tellMeWhatYouAre(&z);
-        zval_ptr_dtor(t);
-    }
-    
-    //zval_dtor(t);
-    zval_ptr_dtor(&z);
-    RETURN_ZVAL(&z, 1, 1);
-}*/
-
-/*ZEND_FUNCTION(pj_test_z) {
-    zval z, t;
-    zval *xyz_arr_p;
-    
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a", &xyz_arr_p) == FAILURE) {
-        RETURN_FALSE;
-    }
-    
-    ZVAL_DOUBLE(&z, 1.0);
-    
-    HashTable *xyz_hash = Z_ARR_P(xyz_arr_p);
-    t = *(zend_hash_index_find(xyz_hash, 2));
-    
-    tellMeWhatYouAre(&t);
-    tellMeWhatYouAre(&z);
-
-    ZVAL_COPY_VALUE(&z, &t);
-    
-    zval_ptr_dtor(&t);
-    zval_ptr_dtor(&z);
-    RETURN_ZVAL(&z, 1, 1);
-}*/
-
 /**
- * 
- * @param execute_data
- * @param return_value
+ * @param object srcDefn
+ * @param object tgtDefn
+ * @param string geometry
+ * @return array ('x' => x, 'y' => y 'z' => z)
  */
 ZEND_FUNCTION(pj_transform_string) {
     
@@ -601,11 +522,9 @@ ZEND_FUNCTION(pj_transform_string) {
     /* coord-params */
     zval pts_arr, xyz_arr;
     zend_string *delimiter, *delimiter2;
-    HashTable *pts_hash /*, *xyz_hash*/;
+    HashTable *pts_hash;
     zval coord;
     zval *zv;
-    
-//    zval *x, *y, z, *t;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rrS", &srcDefn, &tgtDefn, &str) == FAILURE) {
         RETURN_FALSE;
@@ -643,46 +562,11 @@ ZEND_FUNCTION(pj_transform_string) {
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
             
             convert_to_string_ex(zv);
-            //php_printf("zv: %s \n", Z_STRVAL_P(zv));
             
             // in x,y,z zerteilen
             array_init(&xyz_arr);
             php_explode(delimiter2, Z_STR_P(zv), &xyz_arr, LONG_MAX);
-
-            if (Z_TYPE(xyz_arr) != IS_ARRAY) {
-                RETURN_FALSE;
-            }
-
-            /*
-            xyz_hash = Z_ARR_P(&xyz_arr);
-
-            if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) && 
-                NULL != (y = zend_hash_index_find(xyz_hash, 1)) ) {
-                
-                if( NULL == (t = zend_hash_index_find(xyz_hash, 2)) ) {
-                    //php_printf("no value for z found \n");
-                    ZVAL_DOUBLE(&z, 0.0);
-                    //tellMeWhatYouAre(&z);
-                } else {
-                    //php_printf("value for z found \n");
-                    ZVAL_COPY_VALUE(&z, t);
-                    zval_ptr_dtor(t);
-                    convert_to_double_ex(&z);
-                    //tellMeWhatYouAre(&z);
-                }
-                convert_to_double_ex(x);
-                convert_to_double_ex(y);
-                
-                if (projViaWgs84) {
-                    //php_printf("transformiere über WGS84 \n");
-                    coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z) );
-                } else {
-                    //php_printf("transformiere direkt \n");
-                    coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-                }
-                add_next_index_zval(return_value, &coord );
-            }
-            */
+            
             coord = transformCoordArray_static(srcProj, tgtProj, wgsProj, xyz_arr, projViaWgs84 );
             add_next_index_zval(return_value, &coord );
             
