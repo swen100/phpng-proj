@@ -61,13 +61,13 @@ Returns an internal string describing the release version.
 ```
 
 ### example 1:
-
+Transforming variables with x and y [and z] values.
 ```php
 <?php  
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $x = 1224526;
 	    $y = 6621326;
-	    $transformed = **pj_transform_point**($proj_merc, $proj_wgs84, $x, $y);  
+	    $transformed = pj_transform_point($proj_merc, $proj_wgs84, $x, $y);  
 	    print 'latitude: '.$transformed['x'].'<br />';  
 	    print 'longitude: '.$transformed['y'].'<br />';  
 	}
@@ -81,12 +81,12 @@ Returns an internal string describing the release version.
 ```
 
 ### example 2:
-
+Transforming a string containing x,y[,z]-values.
 ```php
 <?php  
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $coords = "11 51,11.5 51.5 20";
-	    $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
+	    $transformed = pj_transform_string($proj_wgs84, $proj_merc, $coords);  
 	    print_r($transformed);  
 	}
 ?>
@@ -111,4 +111,76 @@ Returns an internal string describing the release version.
                 )
 
         )
+```
+
+### example 3:
+Transforming an array containing x,y[,z]-values as strings.
+```php
+<?php  
+	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	    $coords = ["11 51", "11.5 51.5 20"];
+	    $transformed = pj_transform_array( $proj_wgs84, $proj_merc, $coords );
+	    print_r($transformed);  
+	}
+?>
+```
+
+**Output:**
+```
+	array(2) {
+	  [0]=>
+	  array(3) {
+	    ["x"]=>
+	    float(1224514.398726)
+	    ["y"]=>
+	    float(6621293.7227402)
+	    ["z"]=>
+	    float(0)
+	  }
+	  [1]=>
+	  array(3) {
+	    ["x"]=>
+	    float(1280174.1441226)
+	    ["y"]=>
+	    float(6710219.0832207)
+	    ["z"]=>
+	    float(20)
+	  }
+	}
+```
+
+### example 4:
+Transforming an array containing x,y[,z]-values as arrays.
+```php
+<?php  
+	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	    $coords = [[11, 51], [11.5, 51.5, 20]];
+	    $transformed = pj_transform_array( $proj_wgs84, $proj_merc, $coords );
+	    print_r($transformed);  
+	}
+?>
+```
+
+**Output:**
+```
+	array(2) {
+	  [0]=>
+	  array(3) {
+	    ["x"]=>
+	    float(1224514.398726)
+	    ["y"]=>
+	    float(6621293.7227402)
+	    ["z"]=>
+	    float(0)
+	  }
+	  [1]=>
+	  array(3) {
+	    ["x"]=>
+	    float(1280174.1441226)
+	    ["y"]=>
+	    float(6710219.0832207)
+	    ["z"]=>
+	    float(20)
+	  }
+	}
 ```
