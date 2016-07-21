@@ -2,63 +2,6 @@
 
 A php extension for proj.4
 
-## Code example (see: [ProjAPI](http://trac.osgeo.org/proj/wiki/ProjAPI))
-
-```php
-<?php  
-	$proj_gk3 = pj_init_plus("+proj=tmerc +lat_0=0 +lon_0=9 +k=1.000000 +x_0=3500000 +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs");
-	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
-	if ($proj_merc !== false && $proj_wgs84 !== false) {  
-	    $x = 1224526;
-	    $y = 6621326;
-	    $transformed = **pj_transform_point**($proj_merc, $proj_wgs84, $x, $y);  
-	    print 'latitude: '.$transformed['x'].'<br />';  
-	    print 'longitude: '.$transformed['y'].'<br />';  
-	}
-?>
-```
-
-**Output:**
-```
-	latitude: 11.000104216017
-	longitude: 51.000182472069
-```
-
-## Code example 2:
-
-```php
-<?php  
-	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
-	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-	if ($proj_merc !== false && $proj_wgs84 !== false) {  
-	    $coords = "11 51,11.5 51.5 20";
-	    $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
-	    print_r($transformed);  
-	}
-?>
-```
-
-**Output:**
-```
-	Array
-        (
-            [0] => Array
-                (
-                    [x] => 1224514.398726
-                    [y] => 6621293.7227402
-                    [z] => 0
-                )
-
-            [1] => Array
-                (
-                    [x] => 1280174.1441226
-                    [y] => 6710219.0832207
-                    [z] => 20
-                )
-
-        )
-```
 ## API Functions
 
 ### Basic API
@@ -106,3 +49,63 @@ Returns an integer value that can be used for the pj_strerrno(int) function.
   
 **string pj_get_release();**  
 Returns an internal string describing the release version. 
+
+## Code examples
+
+### example 1:
+
+```php
+<?php  
+	$proj_gk3 = pj_init_plus("+proj=tmerc +lat_0=0 +lon_0=9 +k=1.000000 +x_0=3500000 +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs");
+	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	    $x = 1224526;
+	    $y = 6621326;
+	    $transformed = **pj_transform_point**($proj_merc, $proj_wgs84, $x, $y);  
+	    print 'latitude: '.$transformed['x'].'<br />';  
+	    print 'longitude: '.$transformed['y'].'<br />';  
+	}
+?>
+```
+
+**Output:**
+```
+	latitude: 11.000104216017
+	longitude: 51.000182472069
+```
+
+### example 2:
+
+```php
+<?php  
+	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	    $coords = "11 51,11.5 51.5 20";
+	    $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
+	    print_r($transformed);  
+	}
+?>
+```
+
+**Output:**
+```
+	Array
+        (
+            [0] => Array
+                (
+                    [x] => 1224514.398726
+                    [y] => 6621293.7227402
+                    [z] => 0
+                )
+
+            [1] => Array
+                (
+                    [x] => 1280174.1441226
+                    [y] => 6710219.0832207
+                    [z] => 20
+                )
+
+        )
+```
