@@ -7,7 +7,7 @@ A php extension for proj.4
 ### Basic API
 
 **resource pj_init_plus(string definition);**
-Create a Proj.4 resource coordinate system object from the string definition.
+Create a Proj.4 resource coordinate system object from the projection definition.
 
 **array pj_transform_point(resource srcdefn, resource dstdefn, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
