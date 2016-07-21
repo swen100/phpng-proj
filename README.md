@@ -1,22 +1,23 @@
-phpng-proj
-=========
+# phpng-proj
 
 A php extension for proj.4
 
-Code example (see: [ProjAPI](http://trac.osgeo.org/proj/wiki/ProjAPI)):
--------------
-	<?php  
+## Code example (see: [ProjAPI](http://trac.osgeo.org/proj/wiki/ProjAPI))
+
+```php
+<?php  
 	$proj_gk3 = pj_init_plus("+proj=tmerc +lat_0=0 +lon_0=9 +k=1.000000 +x_0=3500000 +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs");
-        $proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-        $proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
-            $x = 1224526;
-            $y = 6621326;
-            $transformed = **pj_transform_point**($proj_merc, $proj_wgs84, $x, $y);  
-            print 'latitude: '.$transformed['x'].'<br />';  
-            print 'longitude: '.$transformed['y'].'<br />';  
-        }
-	?>
+	    $x = 1224526;
+	    $y = 6621326;
+	    $transformed = **pj_transform_point**($proj_merc, $proj_wgs84, $x, $y);  
+	    print 'latitude: '.$transformed['x'].'<br />';  
+	    print 'longitude: '.$transformed['y'].'<br />';  
+	}
+?>
+```
 
 Output:
 -------
@@ -25,15 +26,17 @@ Output:
 
 Code example 2:
 -------------
-	<?php  
+```php
+<?php  
 	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
 	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
-            $coords = "11 51,11.5 51.5 20";
-            $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
-            print_r($transformed);  
-        }
-	?>
+	    $coords = "11 51,11.5 51.5 20";
+	    $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
+	    print_r($transformed);  
+	}
+?>
+```
 
 Output:
 -------
@@ -55,10 +58,10 @@ Output:
 
         )
 
-API Functions
-=============
-Basic API
----------
+## API Functions
+
+### Basic API
+
 **resource pj_init_plus(string definition);**  
 Create a Proj.4 resource coordinate system object from the string definition.  
 
@@ -75,8 +78,8 @@ x, y and z can also be an array of double, int or numeric string values.
 **void pj_free(resource pj);**  
 Frees all resources associated with pj.  
 
-Advanced Functions
-------------------
+### Advanced Functions
+
 **boolean pj_is_latlong(resource pj);**  
 Returns true if the passed coordinate system is geographic (proj=latlong).  
   
@@ -89,8 +92,8 @@ Returns the PROJ.4 initialization string suitable for use with pj_init_plus() th
 **resource proj_wgs84_from_proj(resource pj_in);**  
 Returns a new coordinate system definition which is the geographic coordinate (lat/long) system underlying pj_in.  
 
-Environment Functions
----------------------
+### Environment Functions
+
 **void pj_deallocate_grids();**  
 Frees all resources associated with loaded and cached datum shift grids.  
   
