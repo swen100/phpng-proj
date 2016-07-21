@@ -13,15 +13,12 @@ Create a Proj.4 resource coordinate system object from the string definition.
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
 
-**array pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**
+~~**array pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
-x, y and z can also be an array of double, int or numeric string values.
+x, y and z can also be an array of double, int or numeric string values.~~
 
-**void pj_free(resource pj);**
-Frees all resources associated with pj.
-
-### Additional (non official api) Functions
+The function "pj_transform" was replaces by pj_transform_string and pj_transform_array.
 
 **array pj_transform_string(resource srcdefn, resource dstdefn, string xyz);**
 Transform the x/y[/z] string from the source coordinate system to the destination coordinate system.
@@ -29,6 +26,9 @@ Transform the x/y[/z] string from the source coordinate system to the destinatio
 **array pj_transform_array(resource srcdefn, resource dstdefn, array xyz);**
 Transform the x/y[/z] array from the source coordinate system to the destination coordinate system.
 The array can contain strings with x,y,z-values or also an array with x,y[,z]-values where x, y and z can be of type double, int or numeric string.
+
+**void pj_free(resource pj);**
+Frees all resources associated with pj.
 
 ### Advanced Functions
 
