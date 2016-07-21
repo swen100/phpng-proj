@@ -6,49 +6,57 @@ A php extension for proj.4
 
 ### Basic API
 
-**resource pj_init_plus(string definition);**  
-Create a Proj.4 resource coordinate system object from the string definition.  
+**resource pj_init_plus(string definition);**
+Create a Proj.4 resource coordinate system object from the string definition.
 
-**int pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**  
-Transform the x/y/z points from the source coordinate system to the destination coordinate system.   
-x, y and z can be double, int or a numeric string.  
-x, y and z can also be an array of double, int or numeric string values.  
+**array pj_transform_point(resource srcdefn, resource dstdefn, mixed x, mixed y, mixed z);**
+Transform the x/y/z points from the source coordinate system to the destination coordinate system.
+x, y and z can be double, int or a numeric string.
 
-**int pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**  
-Transform the x/y/z points from the source coordinate system to the destination coordinate system.   
-x, y and z can be double, int or a numeric string.  
-x, y and z can also be an array of double, int or numeric string values.  
+**array pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**
+Transform the x/y/z points from the source coordinate system to the destination coordinate system.
+x, y and z can be double, int or a numeric string.
+x, y and z can also be an array of double, int or numeric string values.
 
-**void pj_free(resource pj);**  
-Frees all resources associated with pj.  
+**void pj_free(resource pj);**
+Frees all resources associated with pj.
+
+### Additional (non official api) Functions
+
+**array pj_transform_string(resource srcdefn, resource dstdefn, string xyz);**
+Transform the x/y[/z] string from the source coordinate system to the destination coordinate system.
+
+**array pj_transform_array(resource srcdefn, resource dstdefn, array xyz);**
+Transform the x/y[/z] array from the source coordinate system to the destination coordinate system.
+The array can contain strings with x,y,z-values or also an array with x,y[,z]-values where x, y and z can be of type double, int or numeric string.
 
 ### Advanced Functions
 
-**boolean pj_is_latlong(resource pj);**  
-Returns true if the passed coordinate system is geographic (proj=latlong).  
+**boolean pj_is_latlong(resource pj);**
+Returns true if the passed coordinate system is geographic (proj=latlong).
   
-**boolean pj_is_geocent(resource pj);**  
-Returns true if the coordinate system is geocentric (proj=geocent).  
-  
-**string pj_get_def(resource pj, int options);**  
-Returns the PROJ.4 initialization string suitable for use with pj_init_plus() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).  
-  
-**resource proj_wgs84_from_proj(resource pj_in);**  
-Returns a new coordinate system definition which is the geographic coordinate (lat/long) system underlying pj_in.  
+**boolean pj_is_geocent(resource pj);**
+Returns true if the coordinate system is geocentric (proj=geocent).
+
+**string pj_get_def(resource pj, int options);**
+Returns the PROJ.4 initialization string suitable for use with pj_init_plus() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
+
+**resource proj_wgs84_from_proj(resource pj_in);**
+Returns a new coordinate system definition which is the geographic coordinate (lat/long) system underlying pj_in.
 
 ### Environment Functions
 
-**void pj_deallocate_grids();**  
-Frees all resources associated with loaded and cached datum shift grids.  
-  
-**string pj_strerrno(int);**  
-Returns the error text associated with the passed in error code.  
-  
-**int pj_get_errno_ref();**  
-Returns an integer value that can be used for the pj_strerrno(int) function.  
-  
-**string pj_get_release();**  
-Returns an internal string describing the release version. 
+**void pj_deallocate_grids();**
+Frees all resources associated with loaded and cached datum shift grids.
+
+**string pj_strerrno(int);**
+Returns the error text associated with the passed in error code.
+
+**int pj_get_errno_ref();**
+Returns an integer value that can be used for the pj_strerrno(int) function.
+
+**string pj_get_release();**
+Returns an internal string describing the release version.
 
 ## Code examples
 
