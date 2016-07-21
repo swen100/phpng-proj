@@ -1,6 +1,6 @@
 # phpng-proj
 
-A php extension for proj.4
+A php extension for proj.4 adapted from https://github.com/swen100/php5-proj and modified to be usable with PHP7 and above.
 
 ## API Functions
 
