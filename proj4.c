@@ -35,13 +35,17 @@ zend_module_entry proj4_module_entry = {
     STANDARD_MODULE_HEADER,
     PHP_PROJ4_EXTNAME,
     proj4_functions,
-    PHP_MINIT(proj4),
-    PHP_MSHUTDOWN(proj4),
-    PHP_RINIT(proj4),
-    NULL,
-    PHP_MINFO(proj4),
+    PHP_MINIT(proj4),           /* module init function */
+    PHP_MSHUTDOWN(proj4),       /* module shutdown function */
+    PHP_RINIT(proj4),           /* request init function */
+    NULL,                       /* request shutdown function, would be PHP_RSHUTDOWN(proj4) */
+    PHP_MINFO(proj4),           /* module info function */
     PHP_PROJ4_VERSION,
-    STANDARD_MODULE_PROPERTIES
+    //PHP_MODULE_GLOBALS(geos),     /* globals descriptor */
+    //PHP_GINIT(geos),              /* globals ctor */
+    //NULL,                         /* globals dtor */
+    //NULL,                         /* post deactivate */
+    STANDARD_MODULE_PROPERTIES      /* or STANDARD_MODULE_PROPERTIES_EX if above used */
 };
 
 static void php_proj4_dtor(zend_resource *resource TSRMLS_DC) {
@@ -133,13 +137,7 @@ static void tellMeWhatYouAre(zval *arg)
     php_printf("\n");
 }
 
-/**
- * 
- * @param srcProj
- * @param tgtProj
- * @param str
- * @return array
- */
+
 static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y, double z) {
 
     int p;
@@ -176,13 +174,7 @@ static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y,
     return return_value;
 }
 
-/**
- * 
- * @param srcProj
- * @param tgtProj
- * @param str
- * @return array
- */
+
 static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsProj, double x, double y, double z) {
 
     int p;
@@ -270,8 +262,8 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
 
 /**
  * 
- * @param object srcDefn
- * @param object tgtDefn
+ * @param resource srcDefn
+ * @param resource tgtDefn
  * @param array points-array
  * @return array ('x' => x, 'y' => y 'z' => z)
  */
@@ -320,13 +312,11 @@ ZEND_FUNCTION(pj_transform_array) {
 //    zval_ptr_dtor(&z);
     zend_string_release(delimiter);
     zval_ptr_dtor(&xyz_arr);
-    
-    
 }
 
 /**
- * @param object srcDefn
- * @param object tgtDefn
+ * @param resource srcDefn
+ * @param resource tgtDefn
  * @param string geometry
  * @return array ('x' => x, 'y' => y 'z' => z)
  */
@@ -391,8 +381,8 @@ ZEND_FUNCTION(pj_transform_string) {
 
 /**
  * 
- * @param object srcDefn
- * @param object tgtDefn
+ * @param resource srcDefn
+ * @param resource tgtDefn
  * @param float x
  * @param float y
  * @param float z
@@ -444,6 +434,11 @@ ZEND_FUNCTION(pj_is_latlong) {
     }
 }
 
+/**
+ * 
+ * @param resource projection
+ * @return boolean
+ */
 ZEND_FUNCTION(pj_is_geocent) {
     zval *zpj;
     projPJ pj;
@@ -462,6 +457,12 @@ ZEND_FUNCTION(pj_is_geocent) {
     }
 }
 
+/**
+ * 
+ * @param resource projection
+ * @param long
+ * @return mixed string or false on error
+ */
 ZEND_FUNCTION(pj_get_def) {
     zend_long options = 0;
     char *result;
@@ -484,6 +485,11 @@ ZEND_FUNCTION(pj_get_def) {
     RETURN_FALSE;
 }
 
+/**
+ * 
+ * @param resource projection
+ * @return mixed resource or false on error
+ */
 ZEND_FUNCTION(pj_latlong_from_proj) {
     zval *zpj_in;
     projPJ pj_in, pj;
@@ -509,14 +515,27 @@ ZEND_FUNCTION(pj_latlong_from_proj) {
     }
 }
 
+/**
+ * 
+ * @return void
+ */
 ZEND_FUNCTION(pj_deallocate_grids) {
     pj_deallocate_grids();
 }
 
+/**
+ * 
+ * @return numeric
+ */
 ZEND_FUNCTION(pj_get_errno_ref) {
     RETURN_LONG(*pj_get_errno_ref());
 }
 
+/**
+ * 
+ * @param integer error-code
+ * @return string error-message
+ */
 ZEND_FUNCTION(pj_strerrno) {
     zend_long error_code;
     char *result;
@@ -530,6 +549,10 @@ ZEND_FUNCTION(pj_strerrno) {
     RETURN_STRING(result);
 }
 
+/**
+ * 
+ * @return string
+ */
 ZEND_FUNCTION(pj_get_release) {
     const char *result;
 
@@ -538,6 +561,10 @@ ZEND_FUNCTION(pj_get_release) {
     RETURN_STRING(result);
 }
 
+/**
+ * 
+ * @return void
+ */
 ZEND_FUNCTION(pj_free) {
     zval *zpj;
     projPJ pj;
