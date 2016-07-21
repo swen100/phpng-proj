@@ -19,13 +19,14 @@ A php extension for proj.4
 ?>
 ```
 
-Output:
--------
+**Output:**
+```
 	latitude: 11.000104216017
-        longitude: 51.000182472069
+	longitude: 51.000182472069
+```
 
-Code example 2:
--------------
+## Code example 2:
+
 ```php
 <?php  
 	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
@@ -38,8 +39,8 @@ Code example 2:
 ?>
 ```
 
-Output:
--------
+**Output:**
+```
 	Array
         (
             [0] => Array
@@ -57,7 +58,7 @@ Output:
                 )
 
         )
-
+```
 ## API Functions
 
 ### Basic API
