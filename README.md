@@ -13,11 +13,12 @@ Create a Proj.4 resource coordinate system object from the string definition.
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
 
+<span style="color:red">
 ~~**array pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
 x, y and z can also be an array of double, int or numeric string values.~~
-
+</span>
 _The function "pj_transform" was replaces by "pj_transform_string" and "pj_transform_array" which are easier to use._
 
 **array pj_transform_string(resource srcdefn, resource dstdefn, string xyz);**
