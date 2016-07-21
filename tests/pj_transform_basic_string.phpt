@@ -16,15 +16,15 @@ if ($pj_latlong === false) {
 }
 $x = "-739443";
 $y = "-1045546";
-$p = pj_transform($pj_krovak, $pj_latlong, 1, 0, $x, $y);
+$p = pj_transform_point($pj_krovak, $pj_latlong, $x, $y);
 var_dump($p);
 ?>
 --EXPECT--
 array(3) {
   ["x"]=>
-  float(0.25261488335704)
+  float(14.473766658548)
   ["y"]=>
-  float(0.87388279965635)
+  float(50.069796209385)
   ["z"]=>
   float(0)
 }

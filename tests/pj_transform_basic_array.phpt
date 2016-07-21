@@ -6,40 +6,36 @@ if (!extension_loaded('proj.4')) { print 'skip proj.4 extension not available'; 
 ?>
 --FILE--
 <?php
-$pj_krovak = pj_init_plus('+proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=0 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel');
-if ($pj_krovak === false) {
+$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
+if ($proj_merc === false) {
 	die(pj_strerrno(pj_get_errno_ref()));
 }
-$pj_latlong = pj_init_plus("+proj=latlong +towgs84=570.8,85.7,462.8,4.998,1.587,5.261,3.56 +units=m");
-if ($pj_latlong === false) {
+$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+if ($proj_wgs84 === false) {
 	die(pj_strerrno(pj_get_errno_ref()));
 }
-$x = array(-739443, -656557);
-$y = array(-1045546, -1070176);
-$p = pj_transform($pj_krovak, $pj_latlong, count($x), 0, $x, $y);
-var_dump($p);
+$coords = ["11 51", "11.5 51.5 20"];
+$transformed = pj_transform_array( $proj_wgs84, $proj_merc, $coords );
+var_dump($transformed);
 ?>
 --EXPECT--
-array(3) {
-  ["x"]=>
-  array(2) {
-    [0]=>
-    float(0.25261488335704)
-    [1]=>
-    float(0.27340068275302)
-  }
-  ["y"]=>
-  array(2) {
-    [0]=>
-    float(0.87388279965635)
-    [1]=>
-    float(0.87171037986086)
-  }
-  ["z"]=>
-  array(2) {
-    [0]=>
+array(2) {
+  [0]=>
+  array(3) {
+    ["x"]=>
+    float(1224514.398726)
+    ["y"]=>
+    float(6621293.7227402)
+    ["z"]=>
     float(0)
-    [1]=>
-    float(0)
+  }
+  [1]=>
+  array(3) {
+    ["x"]=>
+    float(1280174.1441226)
+    ["y"]=>
+    float(6710219.0832207)
+    ["z"]=>
+    float(20)
   }
 }
