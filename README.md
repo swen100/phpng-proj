@@ -52,13 +52,18 @@ Returns an internal string describing the release version.
 
 ## Code examples
 
-### example 1:
-
 ```php
 <?php  
 	$proj_gk3 = pj_init_plus("+proj=tmerc +lon_0=9 +k=1.000000 +x_0=3500000 +ellps=bessel +datum=potsdam +units=m +no_defs");
 	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
+?>
+```
+
+### example 1:
+
+```php
+<?php  
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $x = 1224526;
 	    $y = 6621326;
@@ -79,8 +84,6 @@ Returns an internal string describing the release version.
 
 ```php
 <?php  
-	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
-	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $coords = "11 51,11.5 51.5 20";
 	    $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
