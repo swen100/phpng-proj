@@ -6,58 +6,54 @@ A php extension for proj.4
 Code example (see: [ProjAPI](http://trac.osgeo.org/proj/wiki/ProjAPI)):
 -------------
 	<?php  
-	$pj_merc = pj_init_plus("+proj=merc +ellps=clrk66 +lat_ts=33");  
-	$pj_latlong = pj_init_plus("+proj=latlong +ellps=clrk66");  
-	if ($pj_merc !== false && $pj_latlong !== false) {  
-		$x = deg2rad(-16);  
-		$y = deg2rad(20.25);  
-		$transformed = pj_transform($pj_merc, $pj_latlong, 1, 0, $x, $y);  
-		print 'latitude: '.$transformed['x'].'<br />';  
-		print 'longitude: '.$transformed['y'].'<br />';  
-	}  
+	$proj_gk3 = pj_init_plus("+proj=tmerc +lat_0=0 +lon_0=9 +k=1.000000 +x_0=3500000 +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs");
+        $proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+        $proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+            $x = 1224526;
+            $y = 6621326;
+            $transformed = **pj_transform_point**($proj_merc, $proj_wgs84, $x, $y);  
+            print 'latitude: '.$transformed['x'].'<br />';  
+            print 'longitude: '.$transformed['y'].'<br />';  
+        }
 	?>
 
 Output:
 -------
-	latitude: -1495284.2114735  
-	longitude: 1920596.7899174
+	latitude: 11.000104216017
+        longitude: 51.000182472069
 
 Code example 2:
 -------------
 	<?php  
-	$pj_merc = pj_init_plus("+proj=merc +ellps=clrk66 +lat_ts=33");  
-	$pj_latlong = pj_init_plus("+proj=latlong +ellps=clrk66");  
-	if ($pj_merc !== false && $pj_latlong !== false) {  
-		$x = array(deg2rad(-16), deg2rad(-25));  
-		$y = array(deg2rad(20.25), deg2rad(13.2));  
-		$transformed = pj_transform($pj_merc, $pj_latlong, count($x), 0, $x, $y);  
-		print_r($transformed);  
-	}  
+	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+            $coords = "11 51,11.5 51.5 20";
+            $transformed = **pj_transform_string**($proj_wgs84, $proj_merc, $coords);  
+            print_r($transformed);  
+        }
 	?>
 
 Output:
 -------
 	Array
-	(
-		[x] => Array
-			(
-				[0] => -1495284.2114735
-				[1] => -2336381.5804273
-			)
+        (
+            [0] => Array
+                (
+                    [x] => 1224514.398726
+                    [y] => 6621293.7227402
+                    [z] => 0
+                )
 
-		[y] => Array
-			(
-				[0] => 1920596.7899174
-				[1] => 1236391.9797675
-			)
+            [1] => Array
+                (
+                    [x] => 1280174.1441226
+                    [y] => 6710219.0832207
+                    [z] => 20
+                )
 
-		[z] => Array
-			(
-				[0] => 0
-				[1] => 0
-			)
-
-	)
+        )
 
 API Functions
 =============
@@ -65,12 +61,17 @@ Basic API
 ---------
 **resource pj_init_plus(string definition);**  
 Create a Proj.4 resource coordinate system object from the string definition.  
-  
+
 **int pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**  
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.   
 x, y and z can be double, int or a numeric string.  
 x, y and z can also be an array of double, int or numeric string values.  
-  
+
+**int pj_transform(resource srcdefn, resource dstdefn, int point_count, int point_offset, mixed x, mixed y, mixed z);**  
+Transform the x/y/z points from the source coordinate system to the destination coordinate system.   
+x, y and z can be double, int or a numeric string.  
+x, y and z can also be an array of double, int or numeric string values.  
+
 **void pj_free(resource pj);**  
 Frees all resources associated with pj.  
 
@@ -85,7 +86,7 @@ Returns true if the coordinate system is geocentric (proj=geocent).
 **string pj_get_def(resource pj, int options);**  
 Returns the PROJ.4 initialization string suitable for use with pj_init_plus() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).  
   
-**resource pj_latlong_from_proj(resource pj_in);**  
+**resource proj_wgs84_from_proj(resource pj_in);**  
 Returns a new coordinate system definition which is the geographic coordinate (lat/long) system underlying pj_in.  
 
 Environment Functions
