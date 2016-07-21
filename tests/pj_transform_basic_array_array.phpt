@@ -1,5 +1,5 @@
 --TEST--
-pj_transform() function - basic array test for pj_transform()
+pj_transform() function - basic array test with arrays for pj_transform_array()
 --SKIPIF--
 <?php
 if (!extension_loaded('proj.4')) { print 'skip proj.4 extension not available'; }
@@ -14,7 +14,7 @@ $proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 if ($proj_wgs84 === false) {
 	die(pj_strerrno(pj_get_errno_ref()));
 }
-$coords = ["11 51", "11.5 51.5 20"];
+$coords = [[11, 51], [11.5, 51.5, 20]];
 $transformed = pj_transform_array( $proj_wgs84, $proj_merc, $coords );
 var_dump($transformed);
 ?>
