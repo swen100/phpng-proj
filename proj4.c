@@ -343,7 +343,7 @@ ZEND_FUNCTION(pj_transform_array) {
 
     /* method-params */
     zval xyz_arr, *zv, coord;
-    zend_string *delimiter;
+    zend_string *delimiter, *trimmed_point_string = NULL;
 
     /* user-params */
     zval *srcDefn, *tgtDefn, *xyz_arr_p;
@@ -369,22 +369,28 @@ ZEND_FUNCTION(pj_transform_array) {
     ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
         array_init(&xyz_arr);
 
-        // in x,y,z-Array zerteilen
+//         in x,y,z-Array zerteilen
         if (Z_TYPE_P(zv) != IS_ARRAY) {
             convert_to_string_ex(zv);
-            php_explode(delimiter, php_trim(Z_STR_P(zv), NULL, 0, 3), &xyz_arr, LONG_MAX);
-            //zval_dtor(zv);
+            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
+            php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
         } else {
             ZVAL_COPY_VALUE(&xyz_arr, zv);
         }
 
         coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
         add_next_index_zval(return_value, &coord);
+        
+        zval_ptr_dtor(zv);
         zval_ptr_dtor(&xyz_arr);
     }
     ZEND_HASH_FOREACH_END();
 
+    // cleanup
     zend_string_release(delimiter);
+//    if( trimmed_point_string != NULL) {
+//        zend_string_release(trimmed_point_string);
+//    }
 }
 
 /**
@@ -404,7 +410,7 @@ ZEND_FUNCTION(pj_transform_string) {
 
     /* coord-params */
     zval pts_arr, xyz_arr;
-    zend_string *delimiter, *delimiter2;
+    zend_string *delimiter, *delimiter2, *trimmed_geom_string, *trimmed_point_string;
     HashTable *pts_hash;
     zval coord;
     zval *zv;
@@ -420,29 +426,32 @@ ZEND_FUNCTION(pj_transform_string) {
         RETURN_FALSE;
     }
 
+    array_init(return_value);
+    
     delimiter = zend_string_init(",", 1, 0);
     delimiter2 = zend_string_init(" ", 1, 0);
-
-    array_init(return_value);
-    array_init(&pts_arr);
-
+    
     // in einzelne Koordinaten zerteilen
-    php_explode(delimiter, php_trim(str, NULL, 0, 3), &pts_arr, LONG_MAX);
-
+    array_init(&pts_arr);
+    trimmed_geom_string = php_trim(str, NULL, 0, 3);
+    php_explode(delimiter, trimmed_geom_string, &pts_arr, LONG_MAX);
+    
     if (Z_TYPE(pts_arr) == IS_ARRAY) {
         pts_hash = Z_ARR_P(&pts_arr);
 
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
             
             convert_to_string_ex(zv);
-
+            
             // in x,y,z zerteilen
             array_init(&xyz_arr);
-            php_explode(delimiter2, php_trim(Z_STR_P(zv), NULL, 0, 3), &xyz_arr, LONG_MAX);
-            //zval_dtor(zv);
+            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
+            php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
             
             coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
             add_next_index_zval(return_value, &coord);
+            
+            zval_ptr_dtor(zv);
             zval_ptr_dtor(&xyz_arr);
         }
         ZEND_HASH_FOREACH_END();
@@ -451,7 +460,10 @@ ZEND_FUNCTION(pj_transform_string) {
     // cleanup
     zend_string_release(delimiter);
     zend_string_release(delimiter2);
+    //zend_hash_clean(pts_hash);
     zval_ptr_dtor(&pts_arr);
+    zend_string_release(trimmed_geom_string);
+    zend_string_release(trimmed_point_string);
 }
 
 
