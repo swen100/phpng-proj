@@ -7,7 +7,7 @@
 #include <php_ini.h>
 #include <ext/standard/info.h>
 #include <zend_types.h>
-//#include <ext/standard/php_string.h>
+#include <ext/standard/php_string.h>
 #include <proj_api.h>
 #include <php_proj4.h>
 
@@ -151,9 +151,9 @@ static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y,
         }
 
         array_init(&return_value);
-        add_index_double(&return_value, 0, x);
-        add_index_double(&return_value, 1, y);
-        add_index_double(&return_value, 2, z);
+//        add_index_double(&return_value, 0, x);
+//        add_index_double(&return_value, 1, y);
+//        add_index_double(&return_value, 2, z);
         add_assoc_double(&return_value, "x", x);
         add_assoc_double(&return_value, "y", y);
         add_assoc_double(&return_value, "z", z);
@@ -192,9 +192,9 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
         }
 
         array_init(&return_value);
-        add_index_double(&return_value, 0, x);
-        add_index_double(&return_value, 1, y);
-        add_index_double(&return_value, 2, z);
+//        add_index_double(&return_value, 0, x);
+//        add_index_double(&return_value, 1, y);
+//        add_index_double(&return_value, 2, z);
         add_assoc_double(&return_value, "x", x);
         add_assoc_double(&return_value, "y", y);
         add_assoc_double(&return_value, "z", z);
@@ -239,9 +239,9 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
     }
 
     array_init(&empty_arr);
-    add_index_double(&empty_arr, 0, 0);
-    add_index_double(&empty_arr, 1, 0);
-    add_index_double(&empty_arr, 2, 0);
+//    add_index_double(&empty_arr, 0, 0);
+//    add_index_double(&empty_arr, 1, 0);
+//    add_index_double(&empty_arr, 2, 0);
     add_assoc_double(&empty_arr, "x", 0);
     add_assoc_double(&empty_arr, "y", 0);
     add_assoc_double(&empty_arr, "z", 0);
@@ -392,7 +392,7 @@ ZEND_FUNCTION(pj_transform_string) {
 
     /* user-params */
     zval *srcDefn, *tgtDefn;
-    zend_string *str = NULL;
+    zend_string *str;
 
     /* projection-params */
     projPJ srcProj, tgtProj;
@@ -437,7 +437,6 @@ ZEND_FUNCTION(pj_transform_string) {
 
             coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
             add_next_index_zval(return_value, &coord);
-
         }
         ZEND_HASH_FOREACH_END();
     }
@@ -447,6 +446,7 @@ ZEND_FUNCTION(pj_transform_string) {
     zend_string_release(delimiter2);
     zval_ptr_dtor(&pts_arr);
     zval_ptr_dtor(&xyz_arr);
+    zval_dtor(zv);
 }
 
 
