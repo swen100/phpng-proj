@@ -218,7 +218,7 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
         } else {
             //php_printf("value for z found \n");
             ZVAL_COPY_VALUE(&z, t);
-            zval_ptr_dtor(t);
+            zval_dtor(t);
             convert_to_double_ex(&z);
             //tellMeWhatYouAre(&z);
         }
@@ -233,8 +233,14 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
             //wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
             return projCoordViaWGS84_static(srcProj, tgtProj, pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"), Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
             //pj_free(wgsProj);
+//            zval_dtor(x);
+//            zval_dtor(y);
+//            return coord;
         } else {
             return projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+//            zval_dtor(x);
+//            zval_dtor(y);
+//            return coord;
         }
     }
 
@@ -367,19 +373,18 @@ ZEND_FUNCTION(pj_transform_array) {
         if (Z_TYPE_P(zv) != IS_ARRAY) {
             convert_to_string_ex(zv);
             php_explode(delimiter, php_trim(Z_STR_P(zv), NULL, 0, 3), &xyz_arr, LONG_MAX);
+            //zval_dtor(zv);
         } else {
             ZVAL_COPY_VALUE(&xyz_arr, zv);
         }
 
         coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
         add_next_index_zval(return_value, &coord);
-
+        zval_ptr_dtor(&xyz_arr);
     }
     ZEND_HASH_FOREACH_END();
 
-    //    zval_ptr_dtor(&z);
     zend_string_release(delimiter);
-    zval_ptr_dtor(&xyz_arr);
 }
 
 /**
@@ -422,21 +427,23 @@ ZEND_FUNCTION(pj_transform_string) {
     array_init(&pts_arr);
 
     // in einzelne Koordinaten zerteilen
-    php_explode(delimiter, php_trim(str, " ", 1, 3), &pts_arr, LONG_MAX);
+    php_explode(delimiter, php_trim(str, NULL, 0, 3), &pts_arr, LONG_MAX);
 
     if (Z_TYPE(pts_arr) == IS_ARRAY) {
         pts_hash = Z_ARR_P(&pts_arr);
 
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-
+            
             convert_to_string_ex(zv);
 
             // in x,y,z zerteilen
             array_init(&xyz_arr);
             php_explode(delimiter2, php_trim(Z_STR_P(zv), NULL, 0, 3), &xyz_arr, LONG_MAX);
-
+            //zval_dtor(zv);
+            
             coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
             add_next_index_zval(return_value, &coord);
+            zval_ptr_dtor(&xyz_arr);
         }
         ZEND_HASH_FOREACH_END();
     }
@@ -445,8 +452,6 @@ ZEND_FUNCTION(pj_transform_string) {
     zend_string_release(delimiter);
     zend_string_release(delimiter2);
     zval_ptr_dtor(&pts_arr);
-    zval_ptr_dtor(&xyz_arr);
-    zval_dtor(zv);
 }
 
 
