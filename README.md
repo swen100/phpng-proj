@@ -6,24 +6,6 @@ A php extension for proj.4 adapted from https://github.com/swen100/php5-proj and
 
 [see INSTALL.md](INSTALL)
 
-**short version:**
-```bash
-# Dependencies you need to install
-# git-core php7-devel libproj-dev
-
-git clone https://github.com/swen100/phpng-proj
-cd phpng-proj
-
-# Build and install the extension
-phpize
-./configure
-make install
-
-# Clean up the build files
-make clean
-phpize --clean
-```
-
 ## API Functions
 
 ### Basic API
