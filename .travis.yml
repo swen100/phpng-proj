@@ -15,3 +15,4 @@ install:
 
 before_script:
   - echo "extension=proj4.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+  - phpenv config-rm xdebug.ini
