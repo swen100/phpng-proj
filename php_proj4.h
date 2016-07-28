@@ -1,14 +1,14 @@
 /*
  * File:   php_proj4.hpp
- * Author: Ringo Leese
+ * Author: Swen Zanon
  *
- * Created on 7. März 2013, 18:46
+ * Created on 28. Juli 2016, 11:10
  */
 
 #ifndef PHP_PROJ4_H
 #define PHP_PROJ4_H 1
 
-#define PHP_PROJ4_VERSION "4.8"
+#define PHP_PROJ4_VERSION "1.0"
 #define PHP_PROJ4_EXTNAME "proj.4"
 
 #define PHP_PROJ4_RES_NAME "Proj.4"

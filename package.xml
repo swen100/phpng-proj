@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.9.4" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+    <name>phpng-proj</name>
+    <channel>pecl.php.net</channel>
+    <summary>PHPng-Proj</summary>
+    <description>PHP extension for Proj.4</description>
+    <lead>
+        <name>Swen Zanon</name>
+        <user>swen.zanon</user>
+        <email>swen.zanon@yahoo.de</email>
+        <active>yes</active>
+    </lead>
+    <date>2016-07-28</date>
+    <time>11:02:21</time>
+    <version>
+        <release>1.0.0</release>
+        <api>1.0.0</api>
+    </version>
+    <stability>
+        <release>stable</release>
+        <api>stable</api>
+    </stability>
+    <license uri="https://opensource.org/licenses/MIT">MIT License</license>
+    <notes>
+        final release
+    </notes>
+    <contents>
+        <dir name="/">
+            <file role="doc" name="README.md"/>
+            <file role="doc" name="LICENSE.md"/>
+
+            <file role="src" name="config.m4"/>
+            <file role="src" name="config.w32"/>
+
+            <file role="src" name="proj4.c"/>
+            <file role="src" name="php_proj4.h"/>
+        </dir>
+    </contents>
+    <dependencies>
+        <required>
+            <php>
+                <min>7.0.0</min>
+            </php>
+            <pearinstaller>
+                <min>1.4.0b1</min>
+            </pearinstaller>
+        </required>
+    </dependencies>
+    <providesextension>phpng-proj</providesextension>
+    <extsrcrelease />
+</package>

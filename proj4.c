@@ -87,7 +87,7 @@ ZEND_GET_MODULE(proj4)
   Internal static Functions
   ###########################################################################
 */
-
+/*
 static void tellMeWhatYouAre(zval *arg) {
     zval *zv;
 
@@ -126,7 +126,7 @@ static void tellMeWhatYouAre(zval *arg) {
     }
     php_printf("\n");
 }
-
+*/
 static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y, double z) {
 
     int p;
@@ -138,10 +138,6 @@ static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y,
         y *= DEG_TO_RAD;
     }
 
-    //    php_printf("x: %f \n", x);
-    //    php_printf("y: %f \n", y);
-    //    php_printf("z: %f \n", z);
-
     p = pj_transform(srcProj, tgtProj, 1, 0, &x, &y, &z);
 
     if (p = 1) {
@@ -152,9 +148,6 @@ static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y,
         }
 
         array_init(&return_value);
-//        add_index_double(&return_value, 0, x);
-//        add_index_double(&return_value, 1, y);
-//        add_index_double(&return_value, 2, z);
         add_assoc_double(&return_value, "x", x);
         add_assoc_double(&return_value, "y", y);
         add_assoc_double(&return_value, "z", z);
@@ -179,10 +172,6 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
         y *= DEG_TO_RAD;
     }
 
-    //    php_printf("x: %f \n", x);
-    //    php_printf("y: %f \n", y);
-    //    php_printf("z: %f \n", z);
-
     p = pj_transform(srcProj, tgtProj, 1, 0, &x, &y, &z);
 
     if (p = 1) {
@@ -193,9 +182,6 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
         }
 
         array_init(&return_value);
-//        add_index_double(&return_value, 0, x);
-//        add_index_double(&return_value, 1, y);
-//        add_index_double(&return_value, 2, z);
         add_assoc_double(&return_value, "x", x);
         add_assoc_double(&return_value, "y", y);
         add_assoc_double(&return_value, "z", z);
@@ -213,15 +199,11 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
             NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
 
         if (NULL == (t = zend_hash_index_find(xyz_hash, 2))) {
-            //php_printf("no value for z found \n");
             ZVAL_DOUBLE(&z, 0.0);
-            //tellMeWhatYouAre(&z);
         } else {
-            //php_printf("value for z found \n");
             ZVAL_COPY_VALUE(&z, t);
             zval_dtor(t);
             convert_to_double_ex(&z);
-            //tellMeWhatYouAre(&z);
         }
 
         convert_to_double_ex(x);
@@ -246,9 +228,6 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
     }
 
     array_init(&empty_arr);
-//    add_index_double(&empty_arr, 0, 0);
-//    add_index_double(&empty_arr, 1, 0);
-//    add_index_double(&empty_arr, 2, 0);
     add_assoc_double(&empty_arr, "x", 0);
     add_assoc_double(&empty_arr, "y", 0);
     add_assoc_double(&empty_arr, "z", 0);
@@ -294,7 +273,6 @@ ZEND_FUNCTION(pj_free) {
         RETURN_FALSE;
     }
 
-    //ZEND_FETCH_RESOURCE(pj, projPJ*, &zpj, -1, PHP_PROJ4_RES_NAME, le_proj4);
     pj = (projPJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
 
     zend_list_delete(Z_RES_P(zpj));
