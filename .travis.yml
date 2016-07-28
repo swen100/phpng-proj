@@ -4,10 +4,14 @@ php:
   - 7.0
   - nightly
 
+before-install:
+  - sudo apt-get update -q
+  - sudo apt-get install libgeos-dev
+
 install:
-    - phpize
-    - ./configure
-    - make install
+  - phpize
+  - ./configure
+  - make install
 
 before_script:
-- echo "extension=proj4.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+  - echo "extension=proj4.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
