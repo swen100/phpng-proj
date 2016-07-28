@@ -2,6 +2,8 @@
 
 A php extension for proj.4 adapted from https://github.com/swen100/php5-proj and modified to be usable with PHP7 and above.
 
+[![Build Status](https://travis-ci.org/swen100/phpng-proj.svg?branch=master)](https://travis-ci.org/swen100/phpng-proj)
+
 ### Installation
 
 [see INSTALL.md](INSTALL)
