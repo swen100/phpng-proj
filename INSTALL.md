@@ -18,7 +18,7 @@ phpize
 make install
 
 # optional
-make && make test
+make test
 
 # Clean up the build files
 make clean
