@@ -4,6 +4,9 @@ A php extension for proj.4 adapted from https://github.com/swen100/php5-proj and
 
 ### Installation
 
+[see INSTALL.md](INSTALL)
+
+**short version:**
 ```bash
 # Dependencies you need to install
 # git-core php7-devel libproj-dev
