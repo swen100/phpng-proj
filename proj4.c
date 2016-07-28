@@ -7,6 +7,7 @@
 #include <php_ini.h>
 #include <ext/standard/info.h>
 #include <zend_types.h>
+#include <zend_string.h>
 #include <ext/standard/php_string.h>
 #include <proj_api.h>
 #include <php_proj4.h>
@@ -86,7 +87,7 @@ ZEND_GET_MODULE(proj4)
   Internal static Functions
   ###########################################################################
 */
-/*
+
 static void tellMeWhatYouAre(zval *arg) {
     zval *zv;
 
@@ -124,7 +125,7 @@ static void tellMeWhatYouAre(zval *arg) {
             php_printf("Unknown");
     }
     php_printf("\n");
-}*/
+}
 
 static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y, double z) {
 
@@ -402,7 +403,7 @@ ZEND_FUNCTION(pj_transform_string) {
 
     /* user-params */
     zval *srcDefn, *tgtDefn;
-    zend_string *str;
+    zend_string *str, *xyz_string;
 
     /* projection-params */
     projPJ srcProj, tgtProj;
@@ -439,30 +440,32 @@ ZEND_FUNCTION(pj_transform_string) {
         pts_hash = Z_ARR_P(&pts_arr);
 
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-            
-            convert_to_string_ex(zv);
+//            convert_to_string_ex(zv);
+            xyz_string = zend_string_dup(Z_STR_P(zv), 0);
             
             // in x,y,z zerteilen
             array_init(&xyz_arr);
-            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
+            trimmed_point_string = php_trim(xyz_string, NULL, 0, 3);
+            
             php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
             
             coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
             add_next_index_zval(return_value, &coord);
             
-            zval_ptr_dtor(zv);
+            // cleanup
+//            zval_ptr_dtor(zv);
+            zend_string_release(xyz_string);
+            zend_string_release(trimmed_point_string);
             zval_ptr_dtor(&xyz_arr);
         }
         ZEND_HASH_FOREACH_END();
     }
 
     // cleanup
+    zval_ptr_dtor(&pts_arr);
     zend_string_release(delimiter);
     zend_string_release(delimiter2);
-    //zend_hash_clean(pts_hash);
-    zval_ptr_dtor(&pts_arr);
     zend_string_release(trimmed_geom_string);
-    zend_string_release(trimmed_point_string);
 }
 
 
