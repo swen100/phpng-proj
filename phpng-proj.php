@@ -5,7 +5,7 @@ if(!extension_loaded($module)) {
 	die("Extension $module not available.");
 }
 if (extension_loaded($module)) {
-	echo "Module $module is compiled into PHP";
+	echo "Module $module is compiled into PHP$br\n";
 }
 $functions = get_extension_funcs($module);
 echo "Functions available in the test extension:$br\n";
