@@ -1,0 +1,13 @@
+language: php
+
+php:
+  - 7.0
+  - nightly
+
+install:
+    - phpize
+    - ./configure
+    - make install
+
+before_script:
+- echo "extension=proj4.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
