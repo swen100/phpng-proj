@@ -192,7 +192,8 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
 
 static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_arr) {
     zval *x, *y, z, *t, empty_arr;
-    //projPJ wgsProj;
+    projPJ wgsProj;
+    zval coord;
     HashTable *xyz_hash = Z_ARR_P(&xy_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
@@ -213,12 +214,12 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
          * make sure to go over WGS84 for all transformation between non-geographic coordinate systems
          */
         if (!pj_is_latlong(srcProj) && !pj_is_latlong(tgtProj)) {
-            //wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-            return projCoordViaWGS84_static(srcProj, tgtProj, pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"), Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-            //pj_free(wgsProj);
+            wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+            pj_free(wgsProj);
 //            zval_dtor(x);
 //            zval_dtor(y);
-//            return coord;
+            return coord;
         } else {
             return projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
 //            zval_dtor(x);
