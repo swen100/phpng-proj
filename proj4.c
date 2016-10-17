@@ -291,9 +291,9 @@ ZEND_FUNCTION(pj_transform_point) {
 
     double x, y, z = 0;
     zval *srcDefn, *tgtDefn;
-    projPJ srcProj, tgtProj;
+    projPJ srcProj, tgtProj, wgsProj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rrdd|d", &srcDefn, &tgtDefn, &x, &y, &z) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "rrdd|d", &srcDefn, &tgtDefn, &x, &y, &z) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -305,7 +305,9 @@ ZEND_FUNCTION(pj_transform_point) {
     }
 
     if (!pj_is_latlong(srcProj) && !pj_is_latlong(tgtProj)) {
-        *return_value = projCoordViaWGS84_static(srcProj, tgtProj, pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"), x, y, z);
+        wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+        *return_value = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, x, y, z);
+        pj_free(wgsProj);
     } else {
         *return_value = projCoord_static(srcProj, tgtProj, x, y, z);
     }
