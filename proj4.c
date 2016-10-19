@@ -86,7 +86,7 @@ ZEND_GET_MODULE(proj4)
 /*###########################################################################
   Internal static Functions
   ###########################################################################
-*/
+ */
 /*
 static void tellMeWhatYouAre(zval *arg) {
     zval *zv;
@@ -126,7 +126,7 @@ static void tellMeWhatYouAre(zval *arg) {
     }
     php_printf("\n");
 }
-*/
+ */
 static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y, double z) {
 
     int p;
@@ -217,14 +217,19 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
             wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
             coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
             pj_free(wgsProj);
-//            zval_dtor(x);
-//            zval_dtor(y);
+            zval_dtor(x);
+            zval_dtor(y);
             return coord;
         } else {
-            return projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-//            zval_dtor(x);
-//            zval_dtor(y);
-//            return coord;
+            // ensure valid wgs84-coords
+            if( pj_is_latlong(srcProj) ) {
+                x->value.dval = x->value.dval > 180 ? 180 : (x->value.dval < -180 ? -180 : x->value.dval);
+                y->value.dval = y->value.dval > 90 ? 90 : (y->value.dval < -90 ? -90 : y->value.dval);
+            }
+            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+            zval_dtor(x);
+            zval_dtor(y);
+            return coord;
         }
     }
 
@@ -238,7 +243,7 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
 /*###########################################################################
   API Functions
   ###########################################################################
-*/
+ */
 
 /**
  * 
@@ -250,7 +255,7 @@ ZEND_FUNCTION(pj_init_plus) {
     char *definition;
     size_t definition_length;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &definition, &definition_length) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &definition, &definition_length) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -270,7 +275,7 @@ ZEND_FUNCTION(pj_free) {
     zval *zpj;
     projPJ pj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zpj) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -310,6 +315,11 @@ ZEND_FUNCTION(pj_transform_point) {
         *return_value = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, x, y, z);
         pj_free(wgsProj);
     } else {
+        // ensure valid wgs84-coords
+        if( pj_is_latlong(srcProj) ) {
+            x = x > 180 ? 180 : (x < -180 ? -180 : x);
+            y = y > 90 ? 90 : (y < -90 ? -90 : y);
+        }
         *return_value = projCoord_static(srcProj, tgtProj, x, y, z);
     }
 }
@@ -333,7 +343,7 @@ ZEND_FUNCTION(pj_transform_array) {
     /* projection-params */
     projPJ srcProj, tgtProj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rra", &srcDefn, &tgtDefn, &xyz_arr_p) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "rra", &srcDefn, &tgtDefn, &xyz_arr_p) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -349,7 +359,7 @@ ZEND_FUNCTION(pj_transform_array) {
     HashTable *pts_hash = Z_ARR_P(xyz_arr_p);
 
     ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-        
+
         // in x,y,z-Array zerteilen
         if (Z_TYPE_P(zv) != IS_ARRAY) {
             convert_to_string_ex(zv);
@@ -365,8 +375,8 @@ ZEND_FUNCTION(pj_transform_array) {
         }
 
         add_next_index_zval(return_value, &coord);
-        
-        
+
+
     }
     ZEND_HASH_FOREACH_END();
 
@@ -396,7 +406,7 @@ ZEND_FUNCTION(pj_transform_string) {
     zval coord;
     zval *zv;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rrS", &srcDefn, &tgtDefn, &str) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "rrS", &srcDefn, &tgtDefn, &str) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -408,33 +418,33 @@ ZEND_FUNCTION(pj_transform_string) {
     }
 
     array_init(return_value);
-    
+
     delimiter = zend_string_init(",", 1, 0);
     delimiter2 = zend_string_init(" ", 1, 0);
-    
+
     // in einzelne Koordinaten zerteilen
     array_init(&pts_arr);
     trimmed_geom_string = php_trim(str, NULL, 0, 3);
     php_explode(delimiter, trimmed_geom_string, &pts_arr, LONG_MAX);
-    
+
     if (Z_TYPE(pts_arr) == IS_ARRAY) {
         pts_hash = Z_ARR_P(&pts_arr);
 
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-//            convert_to_string_ex(zv);
+            //            convert_to_string_ex(zv);
             xyz_string = zend_string_dup(Z_STR_P(zv), 0);
-            
+
             // in x,y,z zerteilen
             array_init(&xyz_arr);
             trimmed_point_string = php_trim(xyz_string, NULL, 0, 3);
-            
+
             php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
-            
+
             coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
             add_next_index_zval(return_value, &coord);
-            
+
             // cleanup
-//            zval_ptr_dtor(zv);
+            //            zval_ptr_dtor(zv);
             zend_string_release(xyz_string);
             zend_string_release(trimmed_point_string);
             zval_ptr_dtor(&xyz_arr);
@@ -453,7 +463,7 @@ ZEND_FUNCTION(pj_transform_string) {
 /*###########################################################################
   Advanced Functions
   ###########################################################################
-*/
+ */
 
 /*
  * @param resource projection
@@ -463,7 +473,7 @@ ZEND_FUNCTION(pj_is_latlong) {
     zval *zpj;
     projPJ pj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zpj) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -485,7 +495,7 @@ ZEND_FUNCTION(pj_is_geocent) {
     zval *zpj;
     projPJ pj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zpj) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -510,7 +520,7 @@ ZEND_FUNCTION(pj_get_def) {
     zval *zpj;
     projPJ pj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &zpj, &options) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r|l", &zpj, &options) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -534,7 +544,7 @@ ZEND_FUNCTION(pj_latlong_from_proj) {
     zval *zpj_in;
     projPJ pj_in, pj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zpj_in) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj_in) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -556,7 +566,8 @@ ZEND_FUNCTION(pj_latlong_from_proj) {
 /*###########################################################################
   Environment Functions
   ###########################################################################
-*/
+ */
+
 /**
  * 
  * @return void
@@ -582,7 +593,7 @@ ZEND_FUNCTION(pj_strerrno) {
     zend_long error_code;
     char *result;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &error_code) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &error_code) == FAILURE) {
         RETURN_FALSE;
     }
 
