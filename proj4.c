@@ -224,7 +224,7 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
             // ensure valid wgs84-coords
             if( pj_is_latlong(srcProj) ) {
                 x->value.dval = x->value.dval > 180 ? 180 : (x->value.dval < -180 ? -180 : x->value.dval);
-                y->value.dval = y->value.dval > 90 ? 90 : (y->value.dval < -90 ? -90 : y->value.dval);
+                y->value.dval = y->value.dval > 90 ? 89.9999999 : (y->value.dval < -90 ? -89.9999999 : y->value.dval);
             }
             coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
             zval_dtor(x);
