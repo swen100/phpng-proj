@@ -318,7 +318,7 @@ ZEND_FUNCTION(pj_transform_point) {
         // ensure valid wgs84-coords
         if( pj_is_latlong(srcProj) ) {
             x = x > 180 ? 180 : (x < -180 ? -180 : x);
-            y = y > 90 ? 90 : (y < -90 ? -90 : y);
+            y = y > 90 ? 89.9999999 : (y < -90 ? -89.9999999 : y);
         }
         *return_value = projCoord_static(srcProj, tgtProj, x, y, z);
     }
