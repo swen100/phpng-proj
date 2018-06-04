@@ -1,15 +1,16 @@
-sudo: required
+sudo: false
 dist: trusty
 
 language: php
 
 php:
   - 7.0
-  - nightly
+  - 7.1
+  - 7.2
 
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libproj-dev
+  - apt-get -qq update
+  - apt-get install -y libproj-dev
 
 install:
   - phpize
@@ -17,7 +18,7 @@ install:
   - make install
 
 before_script:
-  - echo "extension=proj4.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+  - echo "extension = proj4.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   - phpenv config-rm xdebug.ini
 
 script:
