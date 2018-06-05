@@ -8,9 +8,8 @@
 #ifndef PHP_PROJ4_H
 #define PHP_PROJ4_H 1
 
-#define PHP_PROJ4_VERSION "1.0"
+#define PHP_PROJ4_VERSION "2.0"
 #define PHP_PROJ4_EXTNAME "proj.4"
-
 #define PHP_PROJ4_RES_NAME "Proj.4"
 
 #ifdef ZTS
@@ -29,10 +28,8 @@ ZEND_FUNCTION(pj_transform_point);
 ZEND_FUNCTION(pj_is_latlong);
 ZEND_FUNCTION(pj_is_geocent);
 ZEND_FUNCTION(pj_get_def);
-ZEND_FUNCTION(pj_latlong_from_proj);
-ZEND_FUNCTION(pj_deallocate_grids);
-ZEND_FUNCTION(pj_get_errno_ref);
-ZEND_FUNCTION(pj_strerrno);
+ZEND_FUNCTION(pj_get_errno);
+ZEND_FUNCTION(pj_errno_string);
 ZEND_FUNCTION(pj_get_release);
 ZEND_FUNCTION(pj_free);
 

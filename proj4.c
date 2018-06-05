@@ -9,7 +9,7 @@
 #include <zend_types.h>
 #include <zend_string.h>
 #include <ext/standard/php_string.h>
-#include <proj_api.h>
+#include <proj.h>
 #include <php_proj4.h>
 
 int le_proj4;
@@ -22,10 +22,8 @@ static zend_function_entry proj4_functions[] = {
     ZEND_FE(pj_is_latlong, NULL)
     ZEND_FE(pj_is_geocent, NULL)
     ZEND_FE(pj_get_def, NULL)
-    ZEND_FE(pj_latlong_from_proj, NULL)
-    ZEND_FE(pj_deallocate_grids, NULL)
-    ZEND_FE(pj_strerrno, NULL)
-    ZEND_FE(pj_get_errno_ref, NULL)
+    ZEND_FE(pj_errno_string, NULL)
+    ZEND_FE(pj_get_errno, NULL)
     ZEND_FE(pj_get_release, NULL)
     ZEND_FE(pj_free, NULL) {
         NULL, NULL, NULL
@@ -50,9 +48,9 @@ zend_module_entry proj4_module_entry = {
 };
 
 static void php_proj4_dtor(zend_resource *resource TSRMLS_DC) {
-    projPJ *proj = (projPJ*) resource->ptr;
+    PJ *proj = (PJ*) resource->ptr;
     if (proj != NULL && proj) {
-        pj_free(proj);
+        proj_destroy(proj);
     }
 }
 
@@ -68,7 +66,12 @@ PHP_MINIT_FUNCTION(proj4) {
 PHP_MINFO_FUNCTION(proj4) {
     php_info_print_table_start();
     php_info_print_table_header(2, "proj.4 module", "enabled");
-    php_info_print_table_row(2, "proj.4 version", pj_get_release());
+    php_info_print_table_row(2, "Proj4 EXT version", PHP_PROJ4_VERSION);
+    php_info_print_table_row(2, "Author", "Swen Zanon");
+    php_info_print_table_row(2, "Powered by", "geoGLIS oHG");
+    php_info_print_table_row(2, "Proj.4 release", proj_info().release);
+    php_info_print_table_row(2, "Proj.4 paths", proj_info().paths);
+    php_info_print_table_row(2, "Proj.4 searchpath", proj_info().searchpath);
     php_info_print_table_end();
 }
 
@@ -127,37 +130,46 @@ static void tellMeWhatYouAre(zval *arg) {
     php_printf("\n");
 }
  */
-static zval projCoord_static(projPJ srcProj, projPJ tgtProj, double x, double y, double z) {
-
-    int p;
+static zval projCoord_static(PJ *srcProj, PJ *tgtProj, double x, double y, double z)
+{
+    PJ_COORD a, b;
     zval return_value;
 
-    // deg2rad
-    if (pj_is_latlong(srcProj) == 1) {
-        x *= DEG_TO_RAD;
-        y *= DEG_TO_RAD;
+    // source is already lat/lon -> deg2rad
+    if (proj_angular_output(srcProj, PJ_FWD) == 1) {
+        x = x > 180 ? 180 : (x < -180 ? -180 : x);
+        y = y > 90 ? 89.9999999 : (y < -90 ? -89.9999999 : y);
+        a = proj_coord (proj_torad(x), proj_torad(y), z, 0);
     }
-
-    p = pj_transform(srcProj, tgtProj, 1, 0, &x, &y, &z);
-
-    if (p = 1) {
+    // transform source-coord to lat/lon
+    else {
+        a = proj_coord (x, y, z, 0);
+        a = proj_trans(srcProj, PJ_INV, a);
+    }
+    //printf ("longitude: %g, latitude: %g\n", a.lp.lam, a.lp.phi);
+    
+    // transform to target-projection
+    b = proj_trans(tgtProj, PJ_FWD, a);
+    //printf ("easting: %g, northing: %g\n", b.enu.e, b.enu.n);
+    
+    if (proj_errno(tgtProj) == 0) {
         // rad2deg
-        if (pj_is_latlong(tgtProj) == 1) {
-            x *= RAD_TO_DEG;
-            y *= RAD_TO_DEG;
+        if (proj_angular_output(tgtProj, PJ_FWD) == 1) {
+            b.xyz.x = proj_todeg(b.xyz.x);
+            b.xyz.y = proj_todeg(b.xyz.y);
         }
 
         array_init(&return_value);
-        add_assoc_double(&return_value, "x", x);
-        add_assoc_double(&return_value, "y", y);
-        add_assoc_double(&return_value, "z", z);
+        add_assoc_double(&return_value, "x", b.xyz.x);
+        add_assoc_double(&return_value, "y", b.xyz.y);
+        add_assoc_double(&return_value, "z", b.xyz.z);
     }
 
     return return_value;
 }
 
-static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsProj, double x, double y, double z) {
-
+/*static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsProj, double x, double y, double z)
+{
     int p;
     zval return_value;
 
@@ -188,11 +200,11 @@ static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsP
     }
 
     return return_value;
-}
+}*/
 
-static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_arr) {
+static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xy_arr)
+{
     zval *x, *y, z, *t, empty_arr;
-    projPJ wgsProj;
     zval coord;
     HashTable *xyz_hash = Z_ARR_P(&xy_arr);
 
@@ -210,27 +222,10 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
         convert_to_double_ex(x);
         convert_to_double_ex(y);
 
-        /*
-         * make sure to go over WGS84 for all transformation between non-geographic coordinate systems
-         */
-        if (!pj_is_latlong(srcProj) && !pj_is_latlong(tgtProj)) {
-            wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-            coord = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-            pj_free(wgsProj);
-            zval_dtor(x);
-            zval_dtor(y);
-            return coord;
-        } else {
-            // ensure valid wgs84-coords
-            if( pj_is_latlong(srcProj) ) {
-                x->value.dval = x->value.dval > 180 ? 180 : (x->value.dval < -180 ? -180 : x->value.dval);
-                y->value.dval = y->value.dval > 90 ? 89.9999999 : (y->value.dval < -90 ? -89.9999999 : y->value.dval);
-            }
-            coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-            zval_dtor(x);
-            zval_dtor(y);
-            return coord;
-        }
+        coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+        zval_dtor(x);
+        zval_dtor(y);
+        return coord;
     }
 
     array_init(&empty_arr);
@@ -250,8 +245,10 @@ static zval transformCoordArray_static(projPJ srcProj, projPJ tgtProj, zval xy_a
  * @param string projection-definition
  * @return resource
  */
-ZEND_FUNCTION(pj_init_plus) {
-    projPJ pj_merc;
+ZEND_FUNCTION(pj_init_plus)
+{
+    //PJ_CONTEXT *C;
+    PJ *P;
     char *definition;
     size_t definition_length;
 
@@ -259,27 +256,31 @@ ZEND_FUNCTION(pj_init_plus) {
         RETURN_FALSE;
     }
 
-    pj_merc = pj_init_plus(definition);
-    if (pj_merc == NULL) {
+    //C = proj_context_create();
+    P = proj_create(0, definition);
+    
+    if (0==P) {
         RETURN_FALSE;
     }
 
-    RETURN_RES(zend_register_resource(pj_merc, le_proj4));
+    RETURN_RES(zend_register_resource(P, le_proj4));
 }
 
 /**
  * 
  * @return void
  */
-ZEND_FUNCTION(pj_free) {
+ZEND_FUNCTION(pj_free)
+{
     zval *zpj;
-    projPJ pj;
+    PJ *P;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
-    pj = (projPJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
+    // @Todo: Prüfen - wofür dieser Aufruf? P wird ja nicht benutzt...
+    P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
 
     zend_list_delete(Z_RES_P(zpj));
 }
@@ -297,31 +298,20 @@ ZEND_FUNCTION(pj_transform_point) {
 
     double x, y, z = 0;
     zval *srcDefn, *tgtDefn;
-    projPJ srcProj, tgtProj, wgsProj;
+    PJ *srcProj, *tgtProj;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "rrdd|d", &srcDefn, &tgtDefn, &x, &y, &z) == FAILURE) {
         RETURN_FALSE;
     }
 
-    srcProj = (projPJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
-    tgtProj = (projPJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
     }
 
-    if (!pj_is_latlong(srcProj) && !pj_is_latlong(tgtProj)) {
-        wgsProj = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-        *return_value = projCoordViaWGS84_static(srcProj, tgtProj, wgsProj, x, y, z);
-        pj_free(wgsProj);
-    } else {
-        // ensure valid wgs84-coords
-        if( pj_is_latlong(srcProj) ) {
-            x = x > 180 ? 180 : (x < -180 ? -180 : x);
-            y = y > 90 ? 89.9999999 : (y < -90 ? -89.9999999 : y);
-        }
-        *return_value = projCoord_static(srcProj, tgtProj, x, y, z);
-    }
+    *return_value = projCoord_static(srcProj, tgtProj, x, y, z);
 }
 
 /**
@@ -341,14 +331,14 @@ ZEND_FUNCTION(pj_transform_array) {
     zval *srcDefn, *tgtDefn, *xyz_arr_p;
 
     /* projection-params */
-    projPJ srcProj, tgtProj;
+    PJ *srcProj, *tgtProj;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "rra", &srcDefn, &tgtDefn, &xyz_arr_p) == FAILURE) {
         RETURN_FALSE;
     }
 
-    srcProj = (projPJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
-    tgtProj = (projPJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
@@ -397,7 +387,7 @@ ZEND_FUNCTION(pj_transform_string) {
     zend_string *str, *xyz_string;
 
     /* projection-params */
-    projPJ srcProj, tgtProj;
+    PJ *srcProj, *tgtProj;
 
     /* coord-params */
     zval pts_arr, xyz_arr;
@@ -410,8 +400,8 @@ ZEND_FUNCTION(pj_transform_string) {
         RETURN_FALSE;
     }
 
-    srcProj = (projPJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
-    tgtProj = (projPJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
@@ -469,17 +459,18 @@ ZEND_FUNCTION(pj_transform_string) {
  * @param resource projection
  * @return boolean
  */
-ZEND_FUNCTION(pj_is_latlong) {
+ZEND_FUNCTION(pj_is_latlong)
+{
     zval *zpj;
-    projPJ pj;
+    PJ *pj;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
-    pj = (projPJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
 
-    if (pj_is_latlong(pj)) {
+    if (proj_angular_output(pj, PJ_FWD) == 1) {
         RETURN_TRUE;
     } else {
         RETURN_FALSE;
@@ -491,17 +482,18 @@ ZEND_FUNCTION(pj_is_latlong) {
  * @param resource projection
  * @return boolean
  */
-ZEND_FUNCTION(pj_is_geocent) {
+ZEND_FUNCTION(pj_is_geocent)
+{
     zval *zpj;
-    projPJ pj;
+    PJ *pj;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
-    pj = (projPJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
 
-    if (pj_is_geocent(pj)) {
+    if (proj_angular_output(pj, PJ_FWD) == 0) {
         RETURN_TRUE;
     } else {
         RETURN_FALSE;
@@ -514,53 +506,25 @@ ZEND_FUNCTION(pj_is_geocent) {
  * @param long
  * @return mixed string or false on error
  */
-ZEND_FUNCTION(pj_get_def) {
-    zend_long options = 0;
-    char *result;
+ZEND_FUNCTION(pj_get_def)
+{
+    PJ_PROJ_INFO result;
     zval *zpj;
-    projPJ pj;
+    PJ *pj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r|l", &zpj, &options) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
         RETURN_FALSE;
     }
 
-    pj = (projPJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
 
     if (pj != NULL && pj) {
-        result = pj_get_def(pj, options);
+        result = proj_pj_info(pj);
 
-        RETURN_STRING(result);
+        RETURN_STRING(result.definition);
     }
 
     RETURN_FALSE;
-}
-
-/**
- * 
- * @param resource projection
- * @return mixed resource or false on error
- */
-ZEND_FUNCTION(pj_latlong_from_proj) {
-    zval *zpj_in;
-    projPJ pj_in, pj;
-
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj_in) == FAILURE) {
-        RETURN_FALSE;
-    }
-
-    pj_in = (projPJ*) zend_fetch_resource_ex(zpj_in, PHP_PROJ4_RES_NAME, le_proj4);
-
-    if (pj_in != NULL && pj_in) {
-        pj = pj_latlong_from_proj(pj_in);
-
-        if (pj == NULL) {
-            RETURN_FALSE;
-        }
-
-        RETURN_RES(zend_register_resource(pj, le_proj4));
-    } else {
-        RETURN_FALSE;
-    }
 }
 
 /*###########################################################################
@@ -570,18 +534,26 @@ ZEND_FUNCTION(pj_latlong_from_proj) {
 
 /**
  * 
- * @return void
- */
-ZEND_FUNCTION(pj_deallocate_grids) {
-    pj_deallocate_grids();
-}
-
-/**
- * 
  * @return numeric
  */
-ZEND_FUNCTION(pj_get_errno_ref) {
-    RETURN_LONG(*pj_get_errno_ref());
+ZEND_FUNCTION(pj_get_errno)
+{
+    zval *zpj;
+    PJ *pj;
+    zend_long error_code;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &zpj) == FAILURE) {
+        RETURN_FALSE;
+    }
+    
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, le_proj4);
+    
+    if (pj != NULL && pj) {
+        error_code = proj_errno(pj);
+        RETURN_LONG(error_code);
+    }
+    
+    RETURN_NULL();
 }
 
 /**
@@ -589,15 +561,16 @@ ZEND_FUNCTION(pj_get_errno_ref) {
  * @param integer error-code
  * @return string error-message
  */
-ZEND_FUNCTION(pj_strerrno) {
+ZEND_FUNCTION(pj_errno_string)
+{
     zend_long error_code;
-    char *result;
+    const char *result;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &error_code) == FAILURE) {
         RETURN_FALSE;
     }
 
-    result = pj_strerrno(error_code);
+    result = proj_errno_string(error_code);
 
     RETURN_STRING(result);
 }
@@ -606,11 +579,8 @@ ZEND_FUNCTION(pj_strerrno) {
  * 
  * @return string
  */
-ZEND_FUNCTION(pj_get_release) {
-    const char *result;
-
-    result = pj_get_release();
-
-    RETURN_STRING(result);
+ZEND_FUNCTION(pj_get_release)
+{
+    RETURN_STRING( proj_info().release );
 }
 
