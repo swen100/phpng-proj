@@ -34,24 +34,24 @@ Frees all resources associated with pj.
 
 ### Advanced Functions
 
-**boolean proj_angular_input(resource pj);**
+**boolean proj_is_latlong(resource pj);**
 Returns true if the input coordinate system is geographic (proj=latlong).
   
-**boolean proj_angular_output(resource pj);**
-Returns true if the output coordinate system is geographic (proj=latlong).
+**boolean proj_is_geocent(resource pj);**
+Returns true if the output coordinate system is geocentric (proj=geocent).
 
-**string proj_pj_info(resource pj);**
+**string proj_get_def(resource pj);**
 Returns the PROJ.4 initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
 
 ### Environment Functions
 
-**string proj_errno_string(int);**
+**string proj_get_errno_string(int);**
 Returns the error text associated with the passed in error code.
 
-**int proj_errno(resource pj);**
+**int proj_get_errno(resource pj);**
 Returns an integer value that can be used for the proj_errno_string(int) function.
 
-**string proj_info();**
+**string proj_get_release();**
 Returns an internal string describing the release version.
 
 ## Code examples
