@@ -18,14 +18,14 @@ Create a Proj.4 resource coordinate system object from the projection definition
 **resource proj_create_crs_to_crs(string srid_from, string srid_to);**
 Create a Proj.4 resource coordinate system object from the source SRID and target SRID.
 
-**array proj_transform_point(resource srcdefn, resource dstdefn, mixed x, mixed y, mixed z);**
+**array proj_transform_point(resource srcPj, resource dstPj, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
 
-**array proj_transform_string(resource srcdefn, resource dstdefn, string xyz);**
+**array proj_transform_string(resource srcPj, resource dstPj, string xyz);**
 Transform the x/y[/z] string from the source coordinate system to the destination coordinate system.
 
-**array proj_transform_array(resource srcdefn, resource dstdefn, array xyz);**
+**array proj_transform_array(resource srcPj, resource dstPj, array xyz);**
 Transform the x/y[/z] array from the source coordinate system to the destination coordinate system.
 The array can contain strings with x,y,z-values or also an array with x,y[,z]-values where x, y and z can be of type double, int or numeric string.
 
