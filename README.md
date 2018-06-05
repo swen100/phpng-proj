@@ -15,6 +15,9 @@ A php extension to be usable with PHP7+ and next generation of Proj.4.
 **resource proj_create(string definition);**
 Create a Proj.4 resource coordinate system object from the projection definition.
 
+**resource proj_create_crs_to_crs(string srid_from, string srid_to);**
+Create a Proj.4 resource coordinate system object from the source SRID and target SRID.
+
 **array proj_transform_point(resource srcdefn, resource dstdefn, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
