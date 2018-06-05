@@ -45,10 +45,10 @@ Returns the PROJ.4 initialization string suitable for use with proj_create() tha
 
 ### Environment Functions
 
-**string proj_errno_string(int);**
+**string proj_get_errno_string(int);**
 Returns the error text associated with the passed in error code.
 
-**int proj_errno(resource pj);**
+**int proj_get_errno(resource pj);**
 Returns an integer value that can be used for the proj_errno_string(int) function.
 
 **string proj_get_release();**
