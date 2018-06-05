@@ -1,8 +1,8 @@
-# phpng-proj
+# phpng-proj5+
 
-A php extension for proj.4 adapted from https://github.com/swen100/php5-proj and modified to be usable with PHP7 and above.
+A php extension to be usable with PHP7+ and next generation of Proj.4.
 
-[![Build Status](https://travis-ci.org/swen100/phpng-proj.svg?branch=master)](https://travis-ci.org/swen100/phpng-proj)
+[![Build Status](h ttps://travis-ci.org/swen100/phpng-proj5+.svg?branch=geos-ng)](h ttps://travis-ci.org/swen100/phpng-proj5+)
 
 ### Installation
 
@@ -12,57 +12,51 @@ A php extension for proj.4 adapted from https://github.com/swen100/php5-proj and
 
 ### Basic API
 
-**resource pj_init_plus(string definition);**
+**resource proj_create(string definition);**
 Create a Proj.4 resource coordinate system object from the projection definition.
 
-**array pj_transform_point(resource srcdefn, resource dstdefn, mixed x, mixed y, mixed z);**
+**array proj_transform_point(resource srcdefn, resource dstdefn, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
 x, y and z can be double, int or a numeric string.
 
-**array pj_transform_string(resource srcdefn, resource dstdefn, string xyz);**
+**array proj_transform_string(resource srcdefn, resource dstdefn, string xyz);**
 Transform the x/y[/z] string from the source coordinate system to the destination coordinate system.
 
-**array pj_transform_array(resource srcdefn, resource dstdefn, array xyz);**
+**array proj_transform_array(resource srcdefn, resource dstdefn, array xyz);**
 Transform the x/y[/z] array from the source coordinate system to the destination coordinate system.
 The array can contain strings with x,y,z-values or also an array with x,y[,z]-values where x, y and z can be of type double, int or numeric string.
 
-**void pj_free(resource pj);**
+**void proj_destroy(resource pj);**
 Frees all resources associated with pj.
 
 ### Advanced Functions
 
-**boolean pj_is_latlong(resource pj);**
-Returns true if the passed coordinate system is geographic (proj=latlong).
+**boolean proj_angular_input(resource pj);**
+Returns true if the input coordinate system is geographic (proj=latlong).
   
-**boolean pj_is_geocent(resource pj);**
-Returns true if the coordinate system is geocentric (proj=geocent).
+**boolean proj_angular_output(resource pj);**
+Returns true if the output coordinate system is geographic (proj=latlong).
 
-**string pj_get_def(resource pj, int options);**
-Returns the PROJ.4 initialization string suitable for use with pj_init_plus() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
-
-**resource proj_wgs84_from_proj(resource pj_in);**
-Returns a new coordinate system definition which is the geographic coordinate (lat/long) system underlying pj_in.
+**string proj_pj_info(resource pj);**
+Returns the PROJ.4 initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
 
 ### Environment Functions
 
-**void pj_deallocate_grids();**
-Frees all resources associated with loaded and cached datum shift grids.
-
-**string pj_strerrno(int);**
+**string proj_errno_string(int);**
 Returns the error text associated with the passed in error code.
 
-**int pj_get_errno_ref();**
-Returns an integer value that can be used for the pj_strerrno(int) function.
+**int proj_errno(resource pj);**
+Returns an integer value that can be used for the proj_errno_string(int) function.
 
-**string pj_get_release();**
+**string proj_info();**
 Returns an internal string describing the release version.
 
 ## Code examples
 
 ```php
 <?php  
-	$proj_wgs84 = pj_init_plus("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-	$proj_merc = pj_init_plus("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	$proj_wgs84 = proj_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+	$proj_merc = proj_create("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
 ?>
 ```
 
@@ -73,7 +67,7 @@ Transforming variables with x and y [and z] values.
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $x = 1224526;
 	    $y = 6621326;
-	    $transformed = pj_transform_point($proj_merc, $proj_wgs84, $x, $y);  
+	    $transformed = proj_transform_point($proj_merc, $proj_wgs84, $x, $y);  
 	    print 'latitude: '.$transformed['x'].'<br />';  
 	    print 'longitude: '.$transformed['y'].'<br />';  
 	}
@@ -92,7 +86,7 @@ Transforming a string containing x,y[,z]-values.
 <?php  
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $coords = "11 51,11.5 51.5 20";
-	    $transformed = pj_transform_string($proj_wgs84, $proj_merc, $coords);  
+	    $transformed = proj_transform_string($proj_wgs84, $proj_merc, $coords);  
 	    print_r($transformed);  
 	}
 ?>
@@ -125,7 +119,7 @@ Transforming an array containing x,y[,z]-values as strings.
 <?php  
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $coords = ["11 51", "11.5 51.5 20"];
-	    $transformed = pj_transform_array( $proj_wgs84, $proj_merc, $coords );
+	    $transformed = proj_transform_array( $proj_wgs84, $proj_merc, $coords );
 	    print_r($transformed);  
 	}
 ?>
@@ -158,7 +152,7 @@ Transforming an array containing x,y[,z]-values as arrays.
 <?php  
 	if ($proj_merc !== false && $proj_wgs84 !== false) {  
 	    $coords = [[11, 51], [11.5, 51.5, 20]];
-	    $transformed = pj_transform_array( $proj_wgs84, $proj_merc, $coords );
+	    $transformed = proj_transform_array( $proj_wgs84, $proj_merc, $coords );
 	    print_r($transformed);  
 	}
 ?>
