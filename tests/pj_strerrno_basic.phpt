@@ -1,14 +1,14 @@
 --TEST--
-pj_strerrno() function - basic test for pj_strerrno()
+proj_strerrno() function - basic test for proj_strerrno()
 --SKIPIF--
 <?php
 if (!extension_loaded('proj.4')) { print 'skip proj.4 extension not available'; }
 ?>
 --FILE--
 <?php
-#$pj = pj_init_plus('foo');
-#$ref = pj_get_errno($pj);
-var_dump(pj_errno_string(-1));
+#$pj = proj_create('foo');
+#$ref = proj_get_errno($pj);
+var_dump(proj_get_errno_string(-1));
 #unset($pj);
 ?>
 --EXPECT--

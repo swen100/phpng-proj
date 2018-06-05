@@ -15,17 +15,17 @@
 int le_proj4;
 
 static zend_function_entry proj4_functions[] = {
-    ZEND_FE(pj_init_plus, NULL)
-    ZEND_FE(pj_transform_string, NULL)
-    ZEND_FE(pj_transform_array, NULL)
-    ZEND_FE(pj_transform_point, NULL)
-    ZEND_FE(pj_is_latlong, NULL)
-    ZEND_FE(pj_is_geocent, NULL)
-    ZEND_FE(pj_get_def, NULL)
-    ZEND_FE(pj_errno_string, NULL)
-    ZEND_FE(pj_get_errno, NULL)
-    ZEND_FE(pj_get_release, NULL)
-    ZEND_FE(pj_free, NULL) {
+    ZEND_FE(proj_create, NULL)
+    ZEND_FE(proj_transform_string, NULL)
+    ZEND_FE(proj_transform_array, NULL)
+    ZEND_FE(proj_transform_point, NULL)
+    ZEND_FE(proj_is_latlong, NULL)
+    ZEND_FE(proj_is_geocent, NULL)
+    ZEND_FE(proj_get_def, NULL)
+    ZEND_FE(proj_get_errno, NULL)
+    ZEND_FE(proj_get_errno_string, NULL)
+    ZEND_FE(proj_get_release, NULL)
+    ZEND_FE(proj_free, NULL) {
         NULL, NULL, NULL
     }
 };
@@ -209,7 +209,7 @@ static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xy_arr)
     HashTable *xyz_hash = Z_ARR_P(&xy_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
-            NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
+        NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
 
         if (NULL == (t = zend_hash_index_find(xyz_hash, 2))) {
             ZVAL_DOUBLE(&z, 0.0);
@@ -245,7 +245,7 @@ static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xy_arr)
  * @param string projection-definition
  * @return resource
  */
-ZEND_FUNCTION(pj_init_plus)
+ZEND_FUNCTION(proj_create)
 {
     //PJ_CONTEXT *C;
     PJ *P;
@@ -270,7 +270,7 @@ ZEND_FUNCTION(pj_init_plus)
  * 
  * @return void
  */
-ZEND_FUNCTION(pj_free)
+ZEND_FUNCTION(proj_free)
 {
     zval *zpj;
     PJ *P;
@@ -294,7 +294,7 @@ ZEND_FUNCTION(pj_free)
  * @param float z
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(pj_transform_point) {
+ZEND_FUNCTION(proj_transform_point) {
 
     double x, y, z = 0;
     zval *srcDefn, *tgtDefn;
@@ -321,7 +321,7 @@ ZEND_FUNCTION(pj_transform_point) {
  * @param array points-array
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(pj_transform_array) {
+ZEND_FUNCTION(proj_transform_array) {
 
     /* method-params */
     zval xyz_arr, *zv, coord;
@@ -380,7 +380,7 @@ ZEND_FUNCTION(pj_transform_array) {
  * @param string geometry
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(pj_transform_string) {
+ZEND_FUNCTION(proj_transform_string) {
 
     /* user-params */
     zval *srcDefn, *tgtDefn;
@@ -459,7 +459,7 @@ ZEND_FUNCTION(pj_transform_string) {
  * @param resource projection
  * @return boolean
  */
-ZEND_FUNCTION(pj_is_latlong)
+ZEND_FUNCTION(proj_is_latlong)
 {
     zval *zpj;
     PJ *pj;
@@ -482,7 +482,7 @@ ZEND_FUNCTION(pj_is_latlong)
  * @param resource projection
  * @return boolean
  */
-ZEND_FUNCTION(pj_is_geocent)
+ZEND_FUNCTION(proj_is_geocent)
 {
     zval *zpj;
     PJ *pj;
@@ -506,7 +506,7 @@ ZEND_FUNCTION(pj_is_geocent)
  * @param long
  * @return mixed string or false on error
  */
-ZEND_FUNCTION(pj_get_def)
+ZEND_FUNCTION(proj_get_def)
 {
     PJ_PROJ_INFO result;
     zval *zpj;
@@ -536,7 +536,7 @@ ZEND_FUNCTION(pj_get_def)
  * 
  * @return numeric
  */
-ZEND_FUNCTION(pj_get_errno)
+ZEND_FUNCTION(proj_get_errno)
 {
     zval *zpj;
     PJ *pj;
@@ -561,7 +561,7 @@ ZEND_FUNCTION(pj_get_errno)
  * @param integer error-code
  * @return string error-message
  */
-ZEND_FUNCTION(pj_errno_string)
+ZEND_FUNCTION(proj_get_errno_string)
 {
     zend_long error_code;
     const char *result;
@@ -579,7 +579,7 @@ ZEND_FUNCTION(pj_errno_string)
  * 
  * @return string
  */
-ZEND_FUNCTION(pj_get_release)
+ZEND_FUNCTION(proj_get_release)
 {
     RETURN_STRING( proj_info().release );
 }

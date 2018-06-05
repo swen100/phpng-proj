@@ -21,17 +21,17 @@ PHP_MSHUTDOWN_FUNCTION(proj4);
 PHP_RINIT_FUNCTION(proj4);
 PHP_MINFO_FUNCTION(proj4);
 
-ZEND_FUNCTION(pj_init_plus);
-ZEND_FUNCTION(pj_transform_string);
-ZEND_FUNCTION(pj_transform_array);
-ZEND_FUNCTION(pj_transform_point);
-ZEND_FUNCTION(pj_is_latlong);
-ZEND_FUNCTION(pj_is_geocent);
-ZEND_FUNCTION(pj_get_def);
-ZEND_FUNCTION(pj_get_errno);
-ZEND_FUNCTION(pj_errno_string);
-ZEND_FUNCTION(pj_get_release);
-ZEND_FUNCTION(pj_free);
+ZEND_FUNCTION(proj_create);
+ZEND_FUNCTION(proj_transform_string);
+ZEND_FUNCTION(proj_transform_array);
+ZEND_FUNCTION(proj_transform_point);
+ZEND_FUNCTION(proj_is_latlong);
+ZEND_FUNCTION(proj_is_geocent);
+ZEND_FUNCTION(proj_get_def);
+ZEND_FUNCTION(proj_get_errno);
+ZEND_FUNCTION(proj_get_errno_string);
+ZEND_FUNCTION(proj_get_release);
+ZEND_FUNCTION(proj_free);
 
 extern zend_module_entry proj4_module_entry;
 #define phpext_proj4_ptr &proj4_module_entry
