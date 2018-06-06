@@ -22,6 +22,7 @@ PHP_RINIT_FUNCTION(proj4);
 PHP_MINFO_FUNCTION(proj4);
 
 ZEND_FUNCTION(proj_create);
+ZEND_FUNCTION(proj_create_crs_to_crs);
 ZEND_FUNCTION(proj_transform_string);
 ZEND_FUNCTION(proj_transform_array);
 ZEND_FUNCTION(proj_transform_point);

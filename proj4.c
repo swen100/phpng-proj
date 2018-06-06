@@ -16,6 +16,7 @@ int le_proj4;
 
 static zend_function_entry proj4_functions[] = {
     ZEND_FE(proj_create, NULL)
+    ZEND_FE(proj_create_crs_to_crs, NULL)
     ZEND_FE(proj_transform_string, NULL)
     ZEND_FE(proj_transform_array, NULL)
     ZEND_FE(proj_transform_point, NULL)
@@ -173,17 +174,42 @@ static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
  */
 ZEND_FUNCTION(proj_create)
 {
-    //PJ_CONTEXT *C;
+    PJ_CONTEXT *C;
     PJ *P;
-    char *definition;
-    size_t definition_length;
+    zend_string *definition;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &definition, &definition_length) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &definition) == FAILURE) {
         RETURN_FALSE;
     }
 
-    //C = proj_context_create();
-    P = proj_create(0, definition);
+    C = proj_context_create();
+    P = proj_create(C, ZSTR_VAL(definition));
+    
+    if (0==P) {
+        RETURN_FALSE;
+    }
+
+    RETURN_RES(zend_register_resource(P, le_proj4));
+}
+
+/**
+ * @param string projection-definition for source
+ * @param string projection-definition for target
+ * @return resource
+ */
+ZEND_FUNCTION(proj_create_crs_to_crs)
+{
+    PJ *P;
+    PJ_CONTEXT *C;
+    
+    zend_string *srid_from, *srid_to;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "SS", &srid_from, &srid_to) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    C = proj_context_create();
+    P = proj_create_crs_to_crs(C, ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), 0);
     
     if (0==P) {
         RETURN_FALSE;
@@ -530,3 +556,27 @@ ZEND_FUNCTION(proj_get_info)
     
     RETURN_ARR( Z_ARR(info_arr) );
 }
+
+
+/**
+ * 
+ * @return array
+ */
+//ZEND_FUNCTION(proj_list_ellps)
+//{
+//    int i;
+//    char *s;
+//    /*const struct*/ PJ_UNITS *unit_list = proj_list_units();
+////    const struct PJ_ELLPS *le;
+////    
+//    for (i = 0; s = unit_list[i].id; ++i);
+//        //strcmp(name, s)
+//    
+////    
+////    
+////    for (le=proj_list_ellps(); le->id ; ++le) {
+////        php_printf("%9s %-16s %-16s %s\n",le->id, le->major, le->ell, le->name);
+////    }
+//    
+//    //RETURN_ARR(  );
+//}
