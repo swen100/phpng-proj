@@ -51,6 +51,9 @@ Returns the error text associated with the passed in error code.
 **int proj_get_errno(resource pj);**
 Returns an integer value that can be used for the proj_errno_string(int) function.
 
+**array proj_get_info();**
+Returns an array with informations about the current PROJ library.
+
 **string proj_get_release();**
 Returns an internal string describing the release version.
 
