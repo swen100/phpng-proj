@@ -90,51 +90,11 @@ ZEND_GET_MODULE(proj4)
   Internal static Functions
   ###########################################################################
  */
-/*
-static void tellMeWhatYouAre(zval *arg) {
-    zval *zv;
-
-    php_printf("\nThe Element is of type: ");
-    switch (Z_TYPE_P(arg)) {
-        case IS_NULL:
-            php_printf("NULL");
-            break;
-        case IS_TRUE:
-        case IS_FALSE:
-            php_printf("Boolean: %s", Z_LVAL_P(arg) ? "TRUE" : "FALSE");
-            break;
-        case IS_LONG:
-            php_printf("Long: %ld", Z_LVAL_P(arg));
-            break;
-        case IS_DOUBLE:
-            php_printf("Double: %f", Z_DVAL_P(arg));
-            break;
-        case IS_STRING:
-            //php_printf("String: ");
-            //PHPWRITE(Z_STRVAL_P(arg), Z_STRLEN_P(arg));
-            php_printf("String: %s", Z_STRVAL_P(arg));
-            php_printf("");
-            break;
-        case IS_ARRAY:
-            php_printf("Array, with this content:\n");
-            HashTable *hash = Z_ARR_P(arg);
-
-            ZEND_HASH_FOREACH_VAL(hash, zv) {
-                tellMeWhatYouAre(zv);
-            }
-            ZEND_HASH_FOREACH_END();
-            break;
-        default:
-            php_printf("Unknown");
-    }
-    php_printf("\n");
-}
- */
 static zval projCoord_static(PJ *srcProj, PJ *tgtProj, double x, double y, double z)
 {
     PJ_COORD a, b;
     zval return_value;
-
+    
     // source is already lat/lon -> deg2rad
     if (proj_angular_output(srcProj, PJ_FWD) == 1) {
         x = x > 180 ? 180 : (x < -180 ? -180 : x);
@@ -146,11 +106,11 @@ static zval projCoord_static(PJ *srcProj, PJ *tgtProj, double x, double y, doubl
         a = proj_coord (x, y, z, 0);
         a = proj_trans(srcProj, PJ_INV, a);
     }
-    //printf ("longitude: %g, latitude: %g\n", a.lp.lam, a.lp.phi);
+    //php_printf ("longitude: %g, latitude: %g\n", a.lp.lam, a.lp.phi);
     
     // transform to target-projection
     b = proj_trans(tgtProj, PJ_FWD, a);
-    //printf ("easting: %g, northing: %g\n", b.enu.e, b.enu.n);
+    //php_printf ("easting: %g, northing: %g\n", b.enu.e, b.enu.n);
     
     if (proj_errno(tgtProj) == 0) {
         // rad2deg
@@ -297,15 +257,15 @@ ZEND_FUNCTION(proj_free)
 ZEND_FUNCTION(proj_transform_point) {
 
     double x, y, z = 0;
-    zval *srcDefn, *tgtDefn;
+    zval *src, *tgt;
     PJ *srcProj, *tgtProj;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "rrdd|d", &srcDefn, &tgtDefn, &x, &y, &z) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "rrdd|d", &src, &tgt, &x, &y, &z) == FAILURE) {
         RETURN_FALSE;
     }
 
-    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, le_proj4);
-    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, le_proj4);
+    srcProj = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ4_RES_NAME, le_proj4);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgt, PHP_PROJ4_RES_NAME, le_proj4);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
@@ -564,15 +524,16 @@ ZEND_FUNCTION(proj_get_errno)
 ZEND_FUNCTION(proj_get_errno_string)
 {
     zend_long error_code;
-    const char *result;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &error_code) == FAILURE) {
+    if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "l", &error_code) == FAILURE) {
         RETURN_FALSE;
     }
+    
+    if( error_code == 0 ) {
+        RETURN_EMPTY_STRING();
+    }
 
-    result = proj_errno_string(error_code);
-
-    RETURN_STRING(result);
+    RETURN_STRING( proj_errno_string(error_code) );
 }
 
 /**
