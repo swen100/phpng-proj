@@ -25,6 +25,7 @@ static zend_function_entry proj4_functions[] = {
     ZEND_FE(proj_get_errno, NULL)
     ZEND_FE(proj_get_errno_string, NULL)
     ZEND_FE(proj_get_release, NULL)
+    ZEND_FE(proj_get_info, NULL)
     ZEND_FE(proj_free, NULL) {
         NULL, NULL, NULL
     }
@@ -81,7 +82,6 @@ PHP_MSHUTDOWN_FUNCTION(proj4) {
 }
 
 #ifdef COMPILE_DL_PROJ4
-
 ZEND_GET_MODULE(proj4)
 #endif
 
@@ -128,45 +128,11 @@ static zval projCoord_static(PJ *srcProj, PJ *tgtProj, double x, double y, doubl
     return return_value;
 }
 
-/*static zval projCoordViaWGS84_static(projPJ srcProj, projPJ tgtProj, projPJ wgsProj, double x, double y, double z)
-{
-    int p;
-    zval return_value;
-
-    pj_transform(srcProj, wgsProj, 1, 0, &x, &y, &z);
-    x *= RAD_TO_DEG;
-    y *= RAD_TO_DEG;
-    srcProj = wgsProj;
-
-    // deg2rad
-    if (pj_is_latlong(srcProj) == 1) {
-        x *= DEG_TO_RAD;
-        y *= DEG_TO_RAD;
-    }
-
-    p = pj_transform(srcProj, tgtProj, 1, 0, &x, &y, &z);
-
-    if (p = 1) {
-        // rad2deg
-        if (pj_is_latlong(tgtProj) == 1) {
-            x *= RAD_TO_DEG;
-            y *= RAD_TO_DEG;
-        }
-
-        array_init(&return_value);
-        add_assoc_double(&return_value, "x", x);
-        add_assoc_double(&return_value, "y", y);
-        add_assoc_double(&return_value, "z", z);
-    }
-
-    return return_value;
-}*/
-
-static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xy_arr)
+static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
 {
     zval *x, *y, z, *t, empty_arr;
     zval coord;
-    HashTable *xyz_hash = Z_ARR_P(&xy_arr);
+    HashTable *xyz_hash = Z_ARR_P(&xyz_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
@@ -545,3 +511,22 @@ ZEND_FUNCTION(proj_get_release)
     RETURN_STRING( proj_info().release );
 }
 
+/**
+ * 
+ * @return array
+ */
+ZEND_FUNCTION(proj_get_info)
+{
+    zval info_arr;
+    array_init(&info_arr);
+    
+    add_assoc_string(&info_arr, "version", strdup(proj_info().version));
+    add_assoc_long(&info_arr, "major", proj_info().major);
+    add_assoc_long(&info_arr, "minor", proj_info().minor);
+    add_assoc_long(&info_arr, "patch", proj_info().patch);
+    //add_assoc_string(&info_arr, "paths", strdup(proj_info().paths));
+    add_assoc_string(&info_arr, "release", strdup(proj_info().release));
+    add_assoc_string(&info_arr, "searchpath", strdup(proj_info().searchpath));
+    
+    RETURN_ARR( Z_ARR(info_arr) );
+}
