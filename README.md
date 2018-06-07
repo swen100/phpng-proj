@@ -2,7 +2,7 @@
 
 A php extension to be usable with PHP7+ and next generation of Proj.4.
 
-[![Build Status](h ttps://travis-ci.org/swen100/phpng-proj5+.svg?branch=geos-ng)](h ttps://travis-ci.org/swen100/phpng-proj5+)
+[![Build Status](https://travis-ci.org/swen100/phpng-proj5+.svg?branch=geos-ng)](https://travis-ci.org/swen100/phpng-proj5+)
 
 ### Installation
 
