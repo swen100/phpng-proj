@@ -10,6 +10,9 @@ make sure the following package is installed: libproj-dev
 git clone https://github.com/swen100/phpng-proj
 cd phpng-proj
 
+# if it´s not the master already
+git checkout proj5+
+
 # Build and install the extension
 phpize
 ./configure
