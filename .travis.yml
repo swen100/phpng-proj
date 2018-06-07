@@ -10,7 +10,7 @@ php:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libproj-dev/unstable
+  - sudo apt-get install -y libproj-dev/5.1
 
 install:
   - phpize
