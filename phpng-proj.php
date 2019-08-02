@@ -1,6 +1,6 @@
 <?php
 $br = (php_sapi_name() == "cli")? "":"<br>";
-$module = 'proj.4';
+$module = 'proj';
 if(!extension_loaded($module)) {
 	die("Extension $module not available.");
 }
