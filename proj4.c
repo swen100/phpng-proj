@@ -14,20 +14,23 @@
 
 int le_proj4;
 
+ZEND_BEGIN_ARG_INFO(Proj_method_no_args, ZEND_SEND_BY_VAL)
+ZEND_END_ARG_INFO()
+
 static zend_function_entry proj4_functions[] = {
-    ZEND_FE(proj_create, NULL)
-    ZEND_FE(proj_create_crs_to_crs, NULL)
-    ZEND_FE(proj_transform_string, NULL)
-    ZEND_FE(proj_transform_array, NULL)
-    ZEND_FE(proj_transform_point, NULL)
-    ZEND_FE(proj_is_latlong, NULL)
-    ZEND_FE(proj_is_geocent, NULL)
-    ZEND_FE(proj_get_def, NULL)
-    ZEND_FE(proj_get_errno, NULL)
-    ZEND_FE(proj_get_errno_string, NULL)
-    ZEND_FE(proj_get_release, NULL)
-    ZEND_FE(proj_get_info, NULL)
-    ZEND_FE(proj_free, NULL) {
+    ZEND_FE(proj_create, Proj_method_no_args)
+    ZEND_FE(proj_create_crs_to_crs, Proj_method_no_args)
+    ZEND_FE(proj_transform_string, Proj_method_no_args)
+    ZEND_FE(proj_transform_array, Proj_method_no_args)
+    ZEND_FE(proj_transform_point, Proj_method_no_args)
+    ZEND_FE(proj_is_latlong, Proj_method_no_args)
+    ZEND_FE(proj_is_geocent, Proj_method_no_args)
+    ZEND_FE(proj_get_def, Proj_method_no_args)
+    ZEND_FE(proj_get_errno, Proj_method_no_args)
+    ZEND_FE(proj_get_errno_string, Proj_method_no_args)
+    ZEND_FE(proj_get_release, Proj_method_no_args)
+    ZEND_FE(proj_get_info, Proj_method_no_args)
+    ZEND_FE(proj_free, Proj_method_no_args) {
         NULL, NULL, NULL
     }
 };
@@ -49,7 +52,7 @@ zend_module_entry proj4_module_entry = {
     STANDARD_MODULE_PROPERTIES /* or STANDARD_MODULE_PROPERTIES_EX if above used */
 };
 
-static void php_proj4_dtor(zend_resource *resource TSRMLS_DC) {
+static void php_proj4_dtor(zend_resource *resource) {
     PJ *proj = (PJ*) resource->ptr;
     if (proj != NULL && proj) {
         proj_destroy(proj);
