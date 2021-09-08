@@ -2,7 +2,7 @@
 proj_get_release() function - basic test for proj_get_release()
 --SKIPIF--
 <?php
-if (!extension_loaded('proj.4')) { print 'skip proj.4 extension not available'; }
+if (!extension_loaded('proj.4') && !extension_loaded('proj')) { echo 'skip proj.4 extension not available'; }
 ?>
 --FILE--
 <?php

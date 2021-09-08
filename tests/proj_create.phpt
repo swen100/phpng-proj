@@ -2,7 +2,7 @@
 proj_create() function - basic test for proj_create()
 --SKIPIF--
 <?php
-if (!extension_loaded('proj.4')) { print 'skip proj.4 extension not available'; }
+if (!extension_loaded('proj.4') && !extension_loaded('proj')) { echo 'skip proj.4 extension not available'; }
 ?>
 --FILE--
 <?php
@@ -11,6 +11,10 @@ if ($pj === false) {
 	die(proj_get_errno_string(proj_get_errno($pj)));
 }
 var_dump($pj);
+
+$pj = proj_create('+proj=foo');
+var_dump($pj);
 ?>
 --EXPECT--
-resource(4) of type (Proj.4)
+resource(4) of type (Proj)
+bool(false)

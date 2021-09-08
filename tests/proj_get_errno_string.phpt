@@ -2,7 +2,7 @@
 proj_strerrno() function - basic test for proj_strerrno()
 --SKIPIF--
 <?php
-if (!extension_loaded('proj.4')) { print 'skip proj.4 extension not available'; }
+if (!extension_loaded('proj.4') && !extension_loaded('proj')) { echo 'skip proj.4 extension not available'; }
 ?>
 --FILE--
 <?php
