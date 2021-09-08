@@ -35,6 +35,8 @@ ZEND_FUNCTION(proj_get_errno);
 ZEND_FUNCTION(proj_get_errno_string);
 ZEND_FUNCTION(proj_get_release);
 ZEND_FUNCTION(proj_get_info);
+ZEND_FUNCTION(proj_list_units);
+ZEND_FUNCTION(proj_list_ellps);
 ZEND_FUNCTION(proj_free);
 
 extern zend_module_entry proj4_module_entry;
