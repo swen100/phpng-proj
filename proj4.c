@@ -3,16 +3,15 @@
 #endif
 
 #include <php.h>
-#include <php_main.h>
 #include <php_ini.h>
 #include <ext/standard/info.h>
 #include <zend_types.h>
 #include <zend_string.h>
 #include <ext/standard/php_string.h>
-#include <php_proj4.h>
-#include <proj.h>
+#include <php_proj.h>
 
 int proj4_destructor;
+int proj4_area_destructor;
 
 static zend_function_entry proj4_functions[] = {
     ZEND_FE(proj_create, NULL)
@@ -31,6 +30,8 @@ static zend_function_entry proj4_functions[] = {
     ZEND_FE(proj_get_info, NULL)
     ZEND_FE(proj_list_units, NULL)
     ZEND_FE(proj_list_ellps, NULL)
+    ZEND_FE(proj_area_create, NULL)
+    ZEND_FE(proj_area_set_bbox, NULL)
     ZEND_FE(proj_free, NULL) {
         NULL, NULL, NULL
     }
@@ -38,14 +39,14 @@ static zend_function_entry proj4_functions[] = {
 
 zend_module_entry proj4_module_entry = {
     STANDARD_MODULE_HEADER,
-    PHP_PROJ4_EXTNAME,
+    PHP_PROJ_EXTNAME,
     proj4_functions,
     PHP_MINIT(proj4),           /* module init function */
     PHP_MSHUTDOWN(proj4),       /* module shutdown function */
     PHP_RINIT(proj4),           /* request init function */
     NULL,                       /* request shutdown function, would be PHP_RSHUTDOWN(proj4) */
     PHP_MINFO(proj4),           /* module info function */
-    PHP_PROJ4_VERSION,
+    PHP_PROJ_VERSION,
     //PHP_MODULE_GLOBALS(geos),     /* globals descriptor */
     //PHP_GINIT(geos),              /* globals ctor */
     //NULL,                         /* globals dtor */
@@ -60,19 +61,27 @@ static void php_proj4_dtor(zend_resource *resource) {
     }
 }
 
+static void php_proj4_area_dtor(zend_resource *resource) {
+    PJ_AREA *area = (PJ_AREA*) resource->ptr;
+    if (area != NULL && area) {
+        proj_area_destroy(area);
+    }
+}
+
 PHP_RINIT_FUNCTION(proj4) {
     return SUCCESS;
 }
 
 PHP_MINIT_FUNCTION(proj4) {
-    proj4_destructor = zend_register_list_destructors_ex(php_proj4_dtor, NULL, PHP_PROJ4_RES_NAME, module_number);
+    proj4_destructor = zend_register_list_destructors_ex(php_proj4_dtor, NULL, PHP_PROJ_RES_NAME, module_number);
+    proj4_area_destructor = zend_register_list_destructors_ex(php_proj4_area_dtor, NULL, PHP_PROJ_AREA_RES_NAME, module_number);
     return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(proj4) {
     php_info_print_table_start();
     php_info_print_table_header(2, "proj module", "enabled");
-    php_info_print_table_row(2, "Version", PHP_PROJ4_VERSION);
+    php_info_print_table_row(2, "Version", PHP_PROJ_VERSION);
     php_info_print_table_row(2, "Author", "Swen Zanon");
     php_info_print_table_row(2, "Powered by", "geoGLIS oHG");
     php_info_print_table_row(2, "PROJ Release", proj_info().release);
@@ -238,22 +247,34 @@ ZEND_FUNCTION(proj_create)
 /**
  * @param string crs code provided by authorities (such as "EPSG:4326", etc...) for source
  * @param string crs code provided by authorities (such as "EPSG:4326", etc...) for target
+ * @param resource area of interest
  * @return resource
  */
 ZEND_FUNCTION(proj_create_crs_to_crs)
 {
     PJ *P;
+    PJ_AREA *A = NULL;
     //PJ_CONTEXT *C;
     
     zend_string *srid_from, *srid_to;
+    zval *proj_area = NULL;
 
-    ZEND_PARSE_PARAMETERS_START(2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 3)
             Z_PARAM_STR(srid_from)
             Z_PARAM_STR(srid_to)
+            Z_PARAM_OPTIONAL
+            Z_PARAM_RESOURCE(proj_area)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (proj_area && proj_area != NULL) {
+        A = (PJ_AREA*) zend_fetch_resource_ex(proj_area, PHP_PROJ_AREA_RES_NAME, proj4_area_destructor);
+        if (!A ) {
+            RETURN_FALSE;
+        }
+    }
+    
     //C = proj_context_create();
-    P = proj_create_crs_to_crs(PJ_DEFAULT_CTX, ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), NULL);
+    P = proj_create_crs_to_crs(PJ_DEFAULT_CTX, ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), A);
     
     if (0==P) {
         RETURN_FALSE;
@@ -263,7 +284,57 @@ ZEND_FUNCTION(proj_create_crs_to_crs)
 }
 
 /**
- * 
+ * @return resource
+ */
+ZEND_FUNCTION(proj_area_create)
+{
+    PJ_AREA *A;
+
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    A = proj_area_create();
+    
+    if (0==A) {
+        RETURN_FALSE;
+    }
+
+    RETURN_RES(zend_register_resource(A, proj4_area_destructor));
+}
+
+/**
+ * @param resource
+ * @param double west_lon_degree
+ * @param double south_lat_degree
+ * @param double east_lon_degree
+ * @param double north_lat_degree
+ * @return void
+ */
+ZEND_FUNCTION(proj_area_set_bbox)
+{
+    PJ_AREA *A;
+    double west_lon_degree, south_lat_degree, east_lon_degree, north_lat_degree;
+    zval *area;
+    //PJ *P;
+
+    ZEND_PARSE_PARAMETERS_START(5, 5)
+            Z_PARAM_RESOURCE(area)
+            Z_PARAM_DOUBLE(west_lon_degree)
+            Z_PARAM_DOUBLE(south_lat_degree)
+            Z_PARAM_DOUBLE(east_lon_degree)
+            Z_PARAM_DOUBLE(north_lat_degree)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    A = (PJ_AREA*) zend_fetch_resource_ex(area, PHP_PROJ_AREA_RES_NAME, proj4_area_destructor);
+    
+    if (0==A) {
+        RETURN_FALSE;
+    }
+    
+    proj_area_set_bbox(A, west_lon_degree, south_lat_degree, east_lon_degree, north_lat_degree);
+}
+
+/**
+ * @param resource
  * @return void
  */
 ZEND_FUNCTION(proj_free)
@@ -276,8 +347,8 @@ ZEND_FUNCTION(proj_free)
     ZEND_PARSE_PARAMETERS_END();
 
     // @Todo: Prüfen - wofür dieser Aufruf? P wird ja nicht benutzt...
-    //P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, proj4_destructor);
-    zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, proj4_destructor);
+    //P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj4_destructor);
+    zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj4_destructor);
 
     zend_list_delete(Z_RES_P(zpj));
 }
@@ -306,8 +377,8 @@ ZEND_FUNCTION(proj_transform_point) {
             Z_PARAM_DOUBLE(z)
     ZEND_PARSE_PARAMETERS_END();
 
-    srcProj = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ4_RES_NAME, proj4_destructor);
-    tgtProj = (PJ*) zend_fetch_resource_ex(tgt, PHP_PROJ4_RES_NAME, proj4_destructor);
+    srcProj = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ_RES_NAME, proj4_destructor);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgt, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
@@ -342,7 +413,7 @@ ZEND_FUNCTION(proj6_transform_point) {
             Z_PARAM_DOUBLE(z)
     ZEND_PARSE_PARAMETERS_END();
 
-    P = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ4_RES_NAME, proj4_destructor);
+    P = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (P == NULL) {
         RETURN_FALSE;
@@ -382,7 +453,7 @@ ZEND_FUNCTION(proj6_transform_array) {
             Z_PARAM_ARRAY(xyz_arr_p)
     ZEND_PARSE_PARAMETERS_END();
 
-    P = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ4_RES_NAME, proj4_destructor);
+    P = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (P == NULL) {
         RETURN_FALSE;
@@ -441,8 +512,8 @@ ZEND_FUNCTION(proj_transform_array) {
             Z_PARAM_ARRAY(xyz_arr_p)
     ZEND_PARSE_PARAMETERS_END();
 
-    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, proj4_destructor);
-    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, proj4_destructor);
+    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ_RES_NAME, proj4_destructor);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
@@ -506,8 +577,8 @@ ZEND_FUNCTION(proj_transform_string) {
             Z_PARAM_STR(str)
     ZEND_PARSE_PARAMETERS_END();
 
-    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ4_RES_NAME, proj4_destructor);
-    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ4_RES_NAME, proj4_destructor);
+    srcProj = (PJ*) zend_fetch_resource_ex(srcDefn, PHP_PROJ_RES_NAME, proj4_destructor);
+    tgtProj = (PJ*) zend_fetch_resource_ex(tgtDefn, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (srcProj == NULL || tgtProj == NULL) {
         RETURN_FALSE;
@@ -574,7 +645,7 @@ ZEND_FUNCTION(proj_is_latlong)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
     
-    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, proj4_destructor);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (proj_angular_output(pj, PJ_FWD) == 1) {
         RETURN_TRUE;
@@ -597,7 +668,7 @@ ZEND_FUNCTION(proj_is_geocent)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
 
-    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, proj4_destructor);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (proj_angular_output(pj, PJ_FWD) == 0) {
         RETURN_TRUE;
@@ -622,7 +693,7 @@ ZEND_FUNCTION(proj_get_def)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
 
-    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, proj4_destructor);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj4_destructor);
 
     if (pj != NULL && pj) {
         result = proj_pj_info(pj);
@@ -652,7 +723,7 @@ ZEND_FUNCTION(proj_get_errno)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
     
-    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ4_RES_NAME, proj4_destructor);
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj4_destructor);
     
     if (pj != NULL && pj) {
         error_code = proj_errno(pj);
@@ -711,14 +782,6 @@ ZEND_FUNCTION(proj_get_info)
     RETURN_ARR( Z_ARR(info_arr) );
 }
 
-#ifndef PJ_UNITS
-struct PJ_UNITS {
-    const char  *id;        // units keyword
-    const char  *to_meter;  // multiply by value to get meters
-    const char  *name;      // comments
-    double      factor;     // to_meter factor in actual numbers
-};
-#endif
 /**
  * @hint deprecated since PROJ 7.1
  * @see https://proj.org/development/reference/datatypes.html#c.PJ_UNITS
@@ -726,10 +789,12 @@ struct PJ_UNITS {
  */
 ZEND_FUNCTION(proj_list_units)
 {
-    const PJ_UNITS *unit;
     zval tmp;
     
     array_init(return_value);
+    
+#if PROJ_VERSION_MAJOR < 7 && PROJ_VERSION_MINOR < 2
+    const PJ_UNITS *unit;
     
     for (unit=proj_list_units(); unit->id ; ++unit) {
         //php_printf("%9s %-16s %-16s %f\n",unit->id, unit->to_meter, unit->name, unit->factor);
@@ -744,16 +809,30 @@ ZEND_FUNCTION(proj_list_units)
         add_assoc_zval(return_value, unit->id, &dup);
         zval_dtor(&tmp);
     }
+#else
+    int *result_count;
+    PROJ_UNIT_INFO** units;
+    units = proj_get_units_from_database(NULL,NULL,"linear",0,result_count);
+    
+    for (int i = 0; units && units[i]; i++) {
+        //php_printf("%9s %-16s %-16s %-16s %f\n",units[i]->code, units[i]->auth_name, units[i]->category, units[i]->name, units[i]->conv_factor);
+        array_init(&tmp);
+        
+        add_assoc_string(&tmp, "name", units[i]->name);
+        add_assoc_string(&tmp, "auth_name", units[i]->auth_name);
+        add_assoc_string(&tmp, "category", units[i]->category);
+        add_assoc_double(&tmp, "conv_factor", units[i]->conv_factor);
+        
+        zval dup;
+        ZVAL_COPY(&dup, &tmp);
+        add_assoc_zval(return_value, units[i]->code, &dup);
+        zval_dtor(&tmp);
+    }
+    proj_unit_list_destroy(units);
+#endif
 }
 
-#ifndef PJ_ELLPS
-struct PJ_ELLPS {
-    const char  *id;
-    const char  *major;
-    const char  *ell;
-    const char  *name;
-};
-#endif
+
 /**
  * @see https://proj.org/development/reference/datatypes.html#c.PJ_ELLPS
  * @return array

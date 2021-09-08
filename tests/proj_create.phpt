@@ -17,4 +17,5 @@ var_dump($pj);
 ?>
 --EXPECT--
 resource(4) of type (Proj)
+proj_create: Error -5 (unknown projection id)
 bool(false)
