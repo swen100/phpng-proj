@@ -15,21 +15,21 @@ A php extension to be usable with PHP7+ and next generation of libProj (6+).
 **resource proj_create(string definition);**
 Create a Proj resource coordinate system object from the projection definition suitable for use with proj_create_crs_to_crs_from_pj().
 
-**resource proj_create_crs_to_crs(string srid_from, string srid_to);**
+**resource proj_create_crs_to_crs(string srcCrs, string tgtCrs);**
 Create a Proj resource coordinate system object from the source SRID and target SRID.
 
-**resource proj_create_crs_to_crs_from_pj(resource source_proj, resource target_proj);**
+**resource proj_create_crs_to_crs_from_pj(resource srcPj, resource tgtPj);**
 Create a Proj resource coordinate system object from the source PROJ and target PROJ.
 
-**array proj_transform_point(resource srcPj, resource dstPj, mixed x, mixed y, mixed z);**
-Transform the x/y/z points from the source coordinate system to the destination coordinate system.
+**array proj_transform_point(resource pj, mixed x, mixed y, mixed z);**
+Transform the x/y/z points from the previously set coordinate systems (source, target) within projection.
 x, y and z can be double, int or a numeric string.
 
-**array proj_transform_string(resource srcPj, resource dstPj, string xyz);**
-Transform the x/y[/z] string from the source coordinate system to the destination coordinate system.
+**array proj_transform_string(resource pj, string xyz);**
+Transform the x/y[/z] string from the previously set coordinate systems (source, target) within projection.
 
-**array proj_transform_array(resource srcPj, resource dstPj, array xyz);**
-Transform the x/y[/z] array from the source coordinate system to the destination coordinate system.
+**array proj_transform_array(resource pj, array xyz);**
+Transform the x/y[/z] array from the previously set coordinate systems (source, target) within projection.
 The array can contain strings with x,y,z-values or also an array with x,y[,z]-values where x, y and z can be of type double, int or numeric string.
 
 **void proj_destroy(resource pj);**
