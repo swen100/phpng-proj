@@ -26,6 +26,13 @@ $y = 6621293.7227402;
 $p = proj_transform_point($pj, $x, $y);
 var_dump($p);
 
+// alternative PJ creation
+$srcProj = proj_create('EPSG:3857');
+$tgtProj = proj_create('EPSG:4326');
+$pj2 = proj_create_crs_to_crs_from_pj($srcProj, $tgtProj);
+$p = proj_transform_point($pj2, $x, $y);
+var_dump($p);
+
 try {
     proj_transform_point();
     proj_transform_point($pj);
@@ -45,7 +52,7 @@ array(3) {
   ["y"]=>
   float(51)
   ["z"]=>
-  float(6.9%s)
+  float(%f)
 }
 array(3) {
   ["x"]=>
@@ -53,7 +60,15 @@ array(3) {
   ["y"]=>
   float(51)
   ["z"]=>
-  float(6.9%s)
+  float(%f)
+}
+array(3) {
+  ["x"]=>
+  float(11)
+  ["y"]=>
+  float(51)
+  ["z"]=>
+  float(%f)
 }
 
 Warning: proj_transform_point() expects at least 3 parameters, 0 given in %s

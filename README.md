@@ -1,6 +1,6 @@
 # phpng-proj6+
 
-A php extension to be usable with PHP7+ and next generation of libProj (7+).
+A php extension to be usable with PHP7+ and next generation of libProj (6+).
 
 [![Build Status](https://travis-ci.com/swen100/phpng-proj.svg?branch=proj6+)](https://travis-ci.com/swen100/phpng-proj)
 
@@ -13,10 +13,13 @@ A php extension to be usable with PHP7+ and next generation of libProj (7+).
 ### Basic API
 
 **resource proj_create(string definition);**
-Create a Proj resource coordinate system object from the projection definition.
+Create a Proj resource coordinate system object from the projection definition suitable for use with proj_create_crs_to_crs_from_pj().
 
 **resource proj_create_crs_to_crs(string srid_from, string srid_to);**
 Create a Proj resource coordinate system object from the source SRID and target SRID.
+
+**resource proj_create_crs_to_crs_from_pj(resource source_proj, resource target_proj);**
+Create a Proj resource coordinate system object from the source PROJ and target PROJ.
 
 **array proj_transform_point(resource srcPj, resource dstPj, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
@@ -35,8 +38,8 @@ Frees all resources associated with pj.
 ### Advanced Functions
 
 **boolean proj_is_latlong(resource pj);**
-Returns true if the input coordinate system is geographic (proj=latlong).
-  
+Returns true if the output coordinate system is geographic (proj=latlong).
+
 **boolean proj_is_geocent(resource pj);**
 Returns true if the output coordinate system is geocentric (proj=geocent).
 

@@ -22,8 +22,9 @@ PHP_MSHUTDOWN_FUNCTION(proj);
 PHP_RINIT_FUNCTION(proj);
 PHP_MINFO_FUNCTION(proj);
 
-ZEND_FUNCTION(proj4_create);
+ZEND_FUNCTION(proj_create);
 ZEND_FUNCTION(proj_create_crs_to_crs);
+ZEND_FUNCTION(proj_create_crs_to_crs_from_pj);
 ZEND_FUNCTION(proj4_transform_string);
 ZEND_FUNCTION(proj_transform_string);
 ZEND_FUNCTION(proj4_transform_array);

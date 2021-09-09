@@ -14,8 +14,9 @@ int proj_destructor;
 int proj_area_destructor;
 
 static zend_function_entry proj_functions[] = {
-    ZEND_FE(proj4_create, NULL)
+    ZEND_FE(proj_create, NULL)
     ZEND_FE(proj_create_crs_to_crs, NULL)
+    ZEND_FE(proj_create_crs_to_crs_from_pj, NULL)
     ZEND_FE(proj4_transform_string, NULL)
     ZEND_FE(proj_transform_string, NULL)
     ZEND_FE(proj4_transform_array, NULL)
@@ -223,7 +224,7 @@ static zval proj_transform_array_static(PJ *Proj, zval xyz_arr)
  * @param string projection-definition
  * @return resource
  */
-ZEND_FUNCTION(proj4_create)
+ZEND_FUNCTION(proj_create)
 {
     //PJ_CONTEXT *C;
     PJ *P;
@@ -296,6 +297,69 @@ ZEND_FUNCTION(proj_create_crs_to_crs)
 }
 
 /**
+ * @param resource source_crs
+ * @param resource target_crs
+ * @param resource area of interest
+ * @param string options
+ * @return resource
+ */
+ZEND_FUNCTION(proj_create_crs_to_crs_from_pj)
+{
+    PJ *Proj;
+    PJ_AREA *Area = NULL;
+    
+    char *options;
+    size_t options_len;
+    
+    zval *proj_area = NULL;
+    zval *src_crs, *tgt_crs;
+    PJ *srcP, *tgtP;
+    
+    ZEND_PARSE_PARAMETERS_START(2, 4)
+            Z_PARAM_RESOURCE(src_crs)
+            Z_PARAM_RESOURCE(tgt_crs)
+            Z_PARAM_OPTIONAL
+            Z_PARAM_RESOURCE(proj_area)
+            Z_PARAM_STRING(options, options_len)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    srcP = (PJ*) zend_fetch_resource_ex(src_crs, PHP_PROJ_RES_NAME, proj_destructor);
+    tgtP = (PJ*) zend_fetch_resource_ex(tgt_crs, PHP_PROJ_RES_NAME, proj_destructor);
+    
+    if (srcP == NULL || tgtP == NULL) {
+        RETURN_FALSE
+    }
+    
+    if (proj_area && proj_area != NULL) {
+        Area = (PJ_AREA*) zend_fetch_resource_ex(proj_area, PHP_PROJ_AREA_RES_NAME, proj_area_destructor);
+        if (!Area ) {
+            RETURN_FALSE;
+        }
+    }
+    
+    //C = proj_context_create();
+    Proj = proj_create_crs_to_crs_from_pj(PJ_DEFAULT_CTX, srcP, tgtP, Area, NULL);
+    
+    if (0==Proj) {
+        RETURN_FALSE;
+    }
+
+    /* For that particular use case, this is not needed. */
+    /* proj_normalize_for_visualization() ensures that the coordinate */
+    /* order expected and returned by proj_trans() will be longitude, */
+    /* latitude for geographic CRS, and easting, northing for projected */
+    /* CRS. If instead of using PROJ strings as above, "EPSG:XXXX" codes */
+    /* had been used, this might had been necessary. */
+    PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
+    if( 0 != Proj_for_GIS )  {
+        //proj_destroy(Proj);
+        Proj = Proj_for_GIS;
+    }
+    
+    RETURN_RES(zend_register_resource(Proj, proj_destructor));
+}
+
+/**
  * @return resource
  */
 ZEND_FUNCTION(proj_area_create)
@@ -314,7 +378,7 @@ ZEND_FUNCTION(proj_area_create)
 }
 
 /**
- * @param resource
+ * @param resource Area
  * @param double west_lon_degree
  * @param double south_lat_degree
  * @param double east_lon_degree
@@ -346,7 +410,7 @@ ZEND_FUNCTION(proj_area_set_bbox)
 }
 
 /**
- * @param resource
+ * @param resource Proj
  * @return void
  */
 ZEND_FUNCTION(proj_free)
@@ -366,7 +430,6 @@ ZEND_FUNCTION(proj_free)
 }
 
 /**
- * 
  * @param resource srcDefn
  * @param resource tgtDefn
  * @param float x
@@ -402,7 +465,6 @@ ZEND_FUNCTION(proj4_transform_point) {
 }
 
 /**
- * 
  * @param resource Proj
  * @param float x
  * @param float y

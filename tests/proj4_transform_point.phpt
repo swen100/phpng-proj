@@ -8,11 +8,11 @@ if (!extension_loaded('proj')) {
 ?>
 --FILE--
 <?php
-$proj_merc = proj4_create("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
+$proj_merc = proj_create("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
 if ($proj_merc === false) {
 	die(proj_get_errno_string(proj_get_errno($proj_merc)));
 }
-$proj_wgs84 = proj4_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+$proj_wgs84 = proj_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
 if ($proj_wgs84 === false) {
 	die(proj_get_errno_string(proj_get_errno($proj_wgs84)));
 }
