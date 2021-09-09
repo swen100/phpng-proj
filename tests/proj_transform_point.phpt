@@ -57,14 +57,14 @@ array(3) {
   float(0)
 }
 
-Warning: proj_transform_point() expects at least 4 parameters, 1 given in /usr/src/phpng-proj/tests/proj_transform_point.php on line %d
+Warning: proj_transform_point() expects at least 4 parameters, 1 given in %s
 
-Warning: proj_transform_point() expects at least 4 parameters, 2 given in /usr/src/phpng-proj/tests/proj_transform_point.php on line %d
+Warning: proj_transform_point() expects at least 4 parameters, 2 given in %s
 
-Warning: proj_transform_point() expects at least 4 parameters, 3 given in /usr/src/phpng-proj/tests/proj_transform_point.php on line %d
+Warning: proj_transform_point() expects at least 4 parameters, 3 given in %s
 
-Warning: proj_transform_point() expects parameter 1 to be resource, null given in /usr/src/phpng-proj/tests/proj_transform_point.php on line %d
+Warning: proj_transform_point() expects parameter 1 to be resource, null given in %s
 
-Warning: proj_transform_point() expects parameter 2 to be resource, null given in /usr/src/phpng-proj/tests/proj_transform_point.php on line %d
+Warning: proj_transform_point() expects parameter 2 to be resource, null given in %s
 
-Warning: proj_transform_point() expects parameter 4 to be float, array given in /usr/src/phpng-proj/tests/proj_transform_point.php on line %d
+Warning: proj_transform_point() expects parameter 4 to be float, array given in %s

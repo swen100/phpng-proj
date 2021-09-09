@@ -38,12 +38,12 @@ array(1) {
   }
 }
 
-Warning: proj_transform_string() expects exactly 3 parameters, 1 given in /usr/src/phpng-proj/tests/proj_transform_string.php on line %d
+Warning: proj_transform_string() expects exactly 3 parameters, 1 given in %s
 
-Warning: proj_transform_string() expects exactly 3 parameters, 2 given in /usr/src/phpng-proj/tests/proj_transform_string.php on line %d
+Warning: proj_transform_string() expects exactly 3 parameters, 2 given in %s
 
-Warning: proj_transform_string() expects parameter 1 to be resource, array given in /usr/src/phpng-proj/tests/proj_transform_string.php on line %d
+Warning: proj_transform_string() expects parameter 1 to be resource, array given in %s
 
-Warning: proj_transform_string() expects parameter 2 to be resource, array given in /usr/src/phpng-proj/tests/proj_transform_string.php on line %d
+Warning: proj_transform_string() expects parameter 2 to be resource, array given in %s
 
-Warning: proj_transform_string() expects parameter 3 to be string, array given in /usr/src/phpng-proj/tests/proj_transform_string.php on line %d
+Warning: proj_transform_string() expects parameter 3 to be string, array given in %s

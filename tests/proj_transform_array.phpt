@@ -28,7 +28,7 @@ proj_transform_array($proj_wgs84, null, $coords);
 proj_transform_array($proj_wgs84, $proj_merc, "test");
 
 ?>
---EXPECT--
+--EXPECTF--
 array(4) {
   [0]=>
   array(3) {
@@ -68,14 +68,14 @@ array(4) {
   }
 }
 
-Warning: proj_transform_array() expects exactly 3 parameters, 0 given in /usr/src/phpng-proj/tests/proj_transform_array.php on line 14
+Warning: proj_transform_array() expects exactly 3 parameters, 0 given in %s
 
-Warning: proj_transform_array() expects exactly 3 parameters, 1 given in /usr/src/phpng-proj/tests/proj_transform_array.php on line 15
+Warning: proj_transform_array() expects exactly 3 parameters, 1 given in %s
 
-Warning: proj_transform_array() expects exactly 3 parameters, 2 given in /usr/src/phpng-proj/tests/proj_transform_array.php on line 16
+Warning: proj_transform_array() expects exactly 3 parameters, 2 given in %s
 
-Warning: proj_transform_array() expects parameter 1 to be resource, null given in /usr/src/phpng-proj/tests/proj_transform_array.php on line 17
+Warning: proj_transform_array() expects parameter 1 to be resource, null given in %s
 
-Warning: proj_transform_array() expects parameter 2 to be resource, null given in /usr/src/phpng-proj/tests/proj_transform_array.php on line 18
+Warning: proj_transform_array() expects parameter 2 to be resource, null given in %s
 
-Warning: proj_transform_array() expects parameter 3 to be array, string given in /usr/src/phpng-proj/tests/proj_transform_array.php on line 19
+Warning: proj_transform_array() expects parameter 3 to be array, string given in %s
