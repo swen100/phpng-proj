@@ -2,7 +2,9 @@
 proj_is_latlong() function - basic test for proj_is_latlong()
 --SKIPIF--
 <?php
-if (!extension_loaded('proj.4') && !extension_loaded('proj')) { echo 'skip proj.4 extension not available'; }
+if (!extension_loaded('proj')) {
+    echo 'skip proj extension not available';
+}
 ?>
 --FILE--
 <?php

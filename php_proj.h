@@ -1,8 +1,7 @@
 /*
- * File:   php_proj4.hpp
+ * File:   php_proj.hpp
  * Author: Swen Zanon
  *
- * Created on 28. Juli 2016, 11:10
  */
 #include <proj.h>
 
@@ -18,10 +17,10 @@
 #include <TSRM.h>
 #endif
 
-PHP_MINIT_FUNCTION(proj4);
-PHP_MSHUTDOWN_FUNCTION(proj4);
-PHP_RINIT_FUNCTION(proj4);
-PHP_MINFO_FUNCTION(proj4);
+PHP_MINIT_FUNCTION(proj);
+PHP_MSHUTDOWN_FUNCTION(proj);
+PHP_RINIT_FUNCTION(proj);
+PHP_MINFO_FUNCTION(proj);
 
 ZEND_FUNCTION(proj_create);
 ZEND_FUNCTION(proj_create_crs_to_crs);
@@ -43,8 +42,8 @@ ZEND_FUNCTION(proj_area_create);
 ZEND_FUNCTION(proj_area_set_bbox);
 ZEND_FUNCTION(proj_free);
 
-extern zend_module_entry proj4_module_entry;
-#define phpext_proj4_ptr &proj4_module_entry
+extern zend_module_entry proj_module_entry;
+#define phpext_proj_ptr &proj_module_entry
 
 #endif
 

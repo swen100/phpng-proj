@@ -12,3 +12,9 @@ echo "Functions available in the test extension:$br\n";
 foreach($functions as $func) {
     echo $func."$br\n";
 }
+
+
+echo "<pre>";
+print_r(proj_list_units());
+
+print_r(proj_list_ellps());

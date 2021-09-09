@@ -17,7 +17,7 @@ git checkout proj5+
 phpize
 ./configure
 
-# this copies the proj4.so file to the php-library directory eg.: /usr/lib/php7/extensions/ 
+# this copies the proj.so file to the php-library directory eg.: /usr/lib/php7/extensions/ 
 make install
 
 # optional
@@ -28,6 +28,6 @@ make clean
 phpize --clean
 ```
 
-create the file 'proj4.ini' in '/etc/php7/conf.d' with the following content: 'extension=proj4.so'
+create the file 'proj.ini' in '/etc/php7/conf.d' with the following content: 'extension=proj.so'
 
 restart your webserver or php7-fpm.

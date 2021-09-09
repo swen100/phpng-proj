@@ -1,8 +1,8 @@
 # phpng-proj5+
 
-A php extension to be usable with PHP7+ and next generation of Proj.4.
+A php extension to be usable with PHP7+ and next generation of libProj.
 
-[![Build Status](https://travis-ci.org/swen100/phpng-proj5+.svg?branch=geos-ng)](https://travis-ci.org/swen100/phpng-proj5+)
+[![Build Status](https://travis-ci.org/swen100/phpng-proj.svg?branch=proj6+)](https://travis-ci.org/swen100/phpng-proj)
 
 ### Installation
 
@@ -13,10 +13,10 @@ A php extension to be usable with PHP7+ and next generation of Proj.4.
 ### Basic API
 
 **resource proj_create(string definition);**
-Create a Proj.4 resource coordinate system object from the projection definition.
+Create a Proj resource coordinate system object from the projection definition.
 
 **resource proj_create_crs_to_crs(string srid_from, string srid_to);**
-Create a Proj.4 resource coordinate system object from the source SRID and target SRID.
+Create a Proj resource coordinate system object from the source SRID and target SRID.
 
 **array proj_transform_point(resource srcPj, resource dstPj, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the source coordinate system to the destination coordinate system.
@@ -41,7 +41,7 @@ Returns true if the input coordinate system is geographic (proj=latlong).
 Returns true if the output coordinate system is geocentric (proj=geocent).
 
 **string proj_get_def(resource pj);**
-Returns the PROJ.4 initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
+Returns the PROJ initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
 
 ### Environment Functions
 

@@ -1,8 +1,10 @@
 --TEST--
-proj_transform() function - basic test for proj_transform_point()
+proj6_transform_point() function - transform test with single points
 --SKIPIF--
 <?php
-if (!extension_loaded('proj.4') && !extension_loaded('proj')) { echo 'skip proj.4 extension not available'; }
+if (!extension_loaded('proj')) {
+    echo 'skip proj extension not available';
+}
 ?>
 --FILE--
 <?php

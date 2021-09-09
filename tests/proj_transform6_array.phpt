@@ -1,9 +1,9 @@
 --TEST--
-proj_transform() function - basic array test with arrays for proj_transform_array()
+proj6_transform_array() function - transform test with arrays
 --SKIPIF--
 <?php
-if (!extension_loaded('proj.4') && !extension_loaded('proj')) {
-    echo 'skip proj.4 extension not available';
+if (!extension_loaded('proj')) {
+    echo 'skip proj extension not available';
 }
 ?>
 --FILE--
