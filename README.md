@@ -1,8 +1,8 @@
-# phpng-proj5+
+# phpng-proj6+
 
-A php extension to be usable with PHP7+ and next generation of libProj.
+A php extension to be usable with PHP7+ and next generation of libProj (7+).
 
-[![Build Status](https://travis-ci.org/swen100/phpng-proj.svg?branch=proj6+)](https://travis-ci.org/swen100/phpng-proj)
+[![Build Status](https://travis-ci.com/swen100/phpng-proj.svg?branch=proj6+)](https://travis-ci.com/swen100/phpng-proj)
 
 ### Installation
 
@@ -61,8 +61,9 @@ Returns an internal string describing the release version.
 
 ```php
 <?php  
-	$proj_wgs84 = proj_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-	$proj_merc = proj_create("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
+	$proj_wgs84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+	$proj_merc = "+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs";
+        $PROJ = proj_create_crs_to_crs($proj_wgs84, $proj_merc);
 ?>
 ```
 
@@ -70,10 +71,10 @@ Returns an internal string describing the release version.
 Transforming variables with x and y [and z] values.
 ```php
 <?php  
-	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	if ($PROJ !== false) {  
 	    $x = 1224526;
 	    $y = 6621326;
-	    $transformed = proj_transform_point($proj_merc, $proj_wgs84, $x, $y);  
+	    $transformed = proj_transform_point($PROJ, $x, $y);  
 	    print 'latitude: '.$transformed['x'].'<br />';  
 	    print 'longitude: '.$transformed['y'].'<br />';  
 	}
@@ -90,9 +91,9 @@ Transforming variables with x and y [and z] values.
 Transforming a string containing x,y[,z]-values.
 ```php
 <?php  
-	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	if ($PROJ !== false) {  
 	    $coords = "11 51,11.5 51.5 20";
-	    $transformed = proj_transform_string($proj_wgs84, $proj_merc, $coords);  
+	    $transformed = proj_transform_string($PROJ, $coords);  
 	    print_r($transformed);  
 	}
 ?>
@@ -123,9 +124,9 @@ Transforming a string containing x,y[,z]-values.
 Transforming an array containing x,y[,z]-values as strings.
 ```php
 <?php  
-	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	if ($PROJ !== false) {  
 	    $coords = ["11 51", "11.5 51.5 20"];
-	    $transformed = proj_transform_array( $proj_wgs84, $proj_merc, $coords );
+	    $transformed = proj_transform_array( $PROJ, $coords );
 	    print_r($transformed);  
 	}
 ?>
@@ -156,9 +157,9 @@ Transforming an array containing x,y[,z]-values as strings.
 Transforming an array containing x,y[,z]-values as arrays.
 ```php
 <?php  
-	if ($proj_merc !== false && $proj_wgs84 !== false) {  
+	if ($PROJ !== false) {  
 	    $coords = [[11, 51], [11.5, 51.5, 20]];
-	    $transformed = proj_transform_array( $proj_wgs84, $proj_merc, $coords );
+	    $transformed = proj_transform_array( $PROJ, $coords );
 	    print_r($transformed);  
 	}
 ?>

@@ -1,0 +1,72 @@
+--TEST--
+proj4_transform_point() function - transform test with single points
+--SKIPIF--
+<?php
+if (!extension_loaded('proj')) {
+    echo 'skip proj extension not available';
+}
+?>
+--FILE--
+<?php
+$proj_merc = proj4_create("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
+if ($proj_merc === false) {
+	die(proj_get_errno_string(proj_get_errno($proj_merc)));
+}
+$proj_wgs84 = proj4_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+if ($proj_wgs84 === false) {
+	die(proj_get_errno_string(proj_get_errno($proj_wgs84)));
+}
+
+// strings
+$x = "1224514.398726";
+$y = "6621293.7227402";
+$p = proj4_transform_point($proj_merc, $proj_wgs84, $x, $y);
+var_dump($p);
+
+// float
+$x = 1224514.398726;
+$y = 6621293.7227402;
+$p = proj4_transform_point($proj_merc, $proj_wgs84, $x, $y);
+var_dump($p);
+
+try {
+    proj4_transform_point($proj_merc);
+    proj4_transform_point($proj_merc, $proj_wgs84);
+    proj4_transform_point($proj_merc, $proj_wgs84, $x);
+    proj4_transform_point(null, $proj_wgs84, $x, $y);
+    proj4_transform_point($proj_merc, null, $x, $y);
+    proj4_transform_point($proj_merc, $proj_wgs84, null, $y);
+    proj4_transform_point($proj_merc, $proj_wgs84, $x, []);
+} catch (Exception $e) {
+    echo $e->getMessage();
+}
+?>
+--EXPECTF--
+array(3) {
+  ["x"]=>
+  float(11)
+  ["y"]=>
+  float(51)
+  ["z"]=>
+  float(0)
+}
+array(3) {
+  ["x"]=>
+  float(11)
+  ["y"]=>
+  float(51)
+  ["z"]=>
+  float(0)
+}
+
+Warning: proj4_transform_point() expects at least 4 parameters, 1 given in %s
+
+Warning: proj4_transform_point() expects at least 4 parameters, 2 given in %s
+
+Warning: proj4_transform_point() expects at least 4 parameters, 3 given in %s
+
+Warning: proj4_transform_point() expects parameter 1 to be resource, null given in %s
+
+Warning: proj4_transform_point() expects parameter 2 to be resource, null given in %s
+
+Warning: proj4_transform_point() expects parameter 4 to be float, array given in %s

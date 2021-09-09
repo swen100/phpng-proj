@@ -8,24 +8,19 @@ if (!extension_loaded('proj')) {
 ?>
 --FILE--
 <?php
-$proj_merc = proj_create("+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs");
-if ($proj_merc === false) {
-    die(proj_get_errno_string(proj_get_errno($proj_merc)));
-}
-$proj_wgs84 = proj_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-if ($proj_wgs84 === false) {
-    die(proj_get_errno_string(proj_get_errno($proj_wgs84)));
-}
+$proj_merc = "+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs";
+$proj_wgs84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+$PROJ = proj_create_crs_to_crs($proj_wgs84, $proj_merc);
+
 $coords = [[11, 51], [11.5, 51.5, 20], "11 51", "11.5 51.5 20"];
-$transformed = proj_transform_array($proj_wgs84, $proj_merc, $coords);
+$transformed = proj_transform_array($PROJ, $coords);
 var_dump($transformed);
 
 proj_transform_array();
-proj_transform_array($proj_wgs84);
-proj_transform_array($proj_wgs84, $proj_merc);
-proj_transform_array(null, $proj_merc, $coords);
-proj_transform_array($proj_wgs84, null, $coords);
-proj_transform_array($proj_wgs84, $proj_merc, "test");
+proj_transform_array($PROJ);
+proj_transform_array(null, $coords);
+proj_transform_array($PROJ, null);
+proj_transform_array($PROJ, "test");
 
 ?>
 --EXPECTF--
@@ -68,14 +63,12 @@ array(4) {
   }
 }
 
-Warning: proj_transform_array() expects exactly 3 parameters, 0 given in %s
+Warning: proj_transform_array() expects exactly 2 parameters, 0 given in %s
 
-Warning: proj_transform_array() expects exactly 3 parameters, 1 given in %s
-
-Warning: proj_transform_array() expects exactly 3 parameters, 2 given in %s
+Warning: proj_transform_array() expects exactly 2 parameters, 1 given in %s
 
 Warning: proj_transform_array() expects parameter 1 to be resource, null given in %s
 
-Warning: proj_transform_array() expects parameter 2 to be resource, null given in %s
+Warning: proj_transform_array() expects parameter 2 to be array, null given in %s
 
-Warning: proj_transform_array() expects parameter 3 to be array, string given in %s
+Warning: proj_transform_array() expects parameter 2 to be array, string given in %s

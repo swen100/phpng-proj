@@ -22,13 +22,14 @@ PHP_MSHUTDOWN_FUNCTION(proj);
 PHP_RINIT_FUNCTION(proj);
 PHP_MINFO_FUNCTION(proj);
 
-ZEND_FUNCTION(proj_create);
+ZEND_FUNCTION(proj4_create);
 ZEND_FUNCTION(proj_create_crs_to_crs);
+ZEND_FUNCTION(proj4_transform_string);
 ZEND_FUNCTION(proj_transform_string);
+ZEND_FUNCTION(proj4_transform_array);
 ZEND_FUNCTION(proj_transform_array);
-ZEND_FUNCTION(proj6_transform_array);
+ZEND_FUNCTION(proj4_transform_point);
 ZEND_FUNCTION(proj_transform_point);
-ZEND_FUNCTION(proj6_transform_point);
 ZEND_FUNCTION(proj_is_latlong);
 ZEND_FUNCTION(proj_is_geocent);
 ZEND_FUNCTION(proj_get_def);

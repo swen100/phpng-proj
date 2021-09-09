@@ -14,13 +14,14 @@ int proj_destructor;
 int proj_area_destructor;
 
 static zend_function_entry proj_functions[] = {
-    ZEND_FE(proj_create, NULL)
+    ZEND_FE(proj4_create, NULL)
     ZEND_FE(proj_create_crs_to_crs, NULL)
+    ZEND_FE(proj4_transform_string, NULL)
     ZEND_FE(proj_transform_string, NULL)
+    ZEND_FE(proj4_transform_array, NULL)
     ZEND_FE(proj_transform_array, NULL)
-    ZEND_FE(proj6_transform_array, NULL)
+    ZEND_FE(proj4_transform_point, NULL)
     ZEND_FE(proj_transform_point, NULL)
-    ZEND_FE(proj6_transform_point, NULL)
     ZEND_FE(proj_is_latlong, NULL)
     ZEND_FE(proj_is_geocent, NULL)
     ZEND_FE(proj_get_def, NULL)
@@ -104,7 +105,7 @@ ZEND_GET_MODULE(proj)
   Internal static Functions
   ###########################################################################
  */
-static zval projCoord_static(PJ *srcProj, PJ *tgtProj, double x, double y, double z)
+static zval proj4_transform_coord_static(PJ *srcProj, PJ *tgtProj, double x, double y, double z)
 {
     PJ_COORD a, b;
     zval coord;
@@ -143,7 +144,7 @@ static zval projCoord_static(PJ *srcProj, PJ *tgtProj, double x, double y, doubl
     return coord;
 }
 
-static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
+static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
 {
     zval *x, *y, z, *t, coord;
     HashTable *xyz_hash = Z_ARR(xyz_arr);
@@ -162,7 +163,7 @@ static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
         convert_to_double_ex(x);
         convert_to_double_ex(y);
 
-        coord = projCoord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+        coord = proj4_transform_coord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
         zval_dtor(x);
         zval_dtor(y);
         return coord;
@@ -175,7 +176,7 @@ static zval transformCoordArray_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
     return coord;
 }
 
-static zval transformCoordArray6_static(PJ *Proj, zval xyz_arr)
+static zval proj_transform_array_static(PJ *Proj, zval xyz_arr)
 {
     zval *x, *y, z, *t, coord;
     double cx, cy, cz = 0;
@@ -196,25 +197,13 @@ static zval transformCoordArray6_static(PJ *Proj, zval xyz_arr)
         convert_to_double_ex(x);
         convert_to_double_ex(y);
         
-        /* For that particular use case, this is not needed. */
-        /* proj_normalize_for_visualization() ensures that the coordinate */
-        /* order expected and returned by proj_trans() will be longitude, */
-        /* latitude for geographic CRS, and easting, northing for projected */
-        /* CRS. If instead of using PROJ strings as above, "EPSG:XXXX" codes */
-        /* had been used, this might had been necessary. */
-        PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
-        if( 0 != Proj_for_GIS )  {
-            //proj_destroy(Proj);
-            Proj = Proj_for_GIS;
-
-            c = proj_coord(Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z), 0);
-            c = proj_trans(Proj, PJ_FWD, c);
-            zval_dtor(x);
-            zval_dtor(y);
-            cx = c.xyz.x;
-            cy = c.xyz.y;
-            cz = c.xyz.z;
-        }
+        c = proj_coord(Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z), 0);
+        c = proj_trans(Proj, PJ_FWD, c);
+        zval_dtor(x);
+        zval_dtor(y);
+        cx = c.xyz.x;
+        cy = c.xyz.y;
+        cz = c.xyz.z;
     }
 
     array_init(&coord);
@@ -234,7 +223,7 @@ static zval transformCoordArray6_static(PJ *Proj, zval xyz_arr)
  * @param string projection-definition
  * @return resource
  */
-ZEND_FUNCTION(proj_create)
+ZEND_FUNCTION(proj4_create)
 {
     //PJ_CONTEXT *C;
     PJ *P;
@@ -263,8 +252,8 @@ ZEND_FUNCTION(proj_create)
  */
 ZEND_FUNCTION(proj_create_crs_to_crs)
 {
-    PJ *P;
-    PJ_AREA *A = NULL;
+    PJ *Proj;
+    PJ_AREA *Area = NULL;
     //PJ_CONTEXT *C;
     
     zend_string *srid_from, *srid_to;
@@ -278,20 +267,32 @@ ZEND_FUNCTION(proj_create_crs_to_crs)
     ZEND_PARSE_PARAMETERS_END();
 
     if (proj_area && proj_area != NULL) {
-        A = (PJ_AREA*) zend_fetch_resource_ex(proj_area, PHP_PROJ_AREA_RES_NAME, proj_area_destructor);
-        if (!A ) {
+        Area = (PJ_AREA*) zend_fetch_resource_ex(proj_area, PHP_PROJ_AREA_RES_NAME, proj_area_destructor);
+        if (!Area ) {
             RETURN_FALSE;
         }
     }
     
     //C = proj_context_create();
-    P = proj_create_crs_to_crs(PJ_DEFAULT_CTX, ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), A);
+    Proj = proj_create_crs_to_crs(PJ_DEFAULT_CTX, ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), Area);
     
-    if (0==P) {
+    if (0==Proj) {
         RETURN_FALSE;
     }
 
-    RETURN_RES(zend_register_resource(P, proj_destructor));
+    /* For that particular use case, this is not needed. */
+    /* proj_normalize_for_visualization() ensures that the coordinate */
+    /* order expected and returned by proj_trans() will be longitude, */
+    /* latitude for geographic CRS, and easting, northing for projected */
+    /* CRS. If instead of using PROJ strings as above, "EPSG:XXXX" codes */
+    /* had been used, this might had been necessary. */
+    PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
+    if( 0 != Proj_for_GIS )  {
+        //proj_destroy(Proj);
+        Proj = Proj_for_GIS;
+    }
+    
+    RETURN_RES(zend_register_resource(Proj, proj_destructor));
 }
 
 /**
@@ -351,17 +352,17 @@ ZEND_FUNCTION(proj_area_set_bbox)
 ZEND_FUNCTION(proj_free)
 {
     zval *zpj;
-    //PJ *P;
+    PJ *P;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
 
-    // @Todo: Prüfen - wofür dieser Aufruf? P wird ja nicht benutzt...
-    //P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
-    zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
-
-    zend_list_delete(Z_RES_P(zpj));
+    P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
+    
+    if (P != NULL) {
+        zend_list_delete(Z_RES_P(zpj));
+    }
 }
 
 /**
@@ -373,7 +374,7 @@ ZEND_FUNCTION(proj_free)
  * @param float z
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(proj_transform_point) {
+ZEND_FUNCTION(proj4_transform_point) {
 
     double x, y, z = 0;
     zval *src, *tgt, coord;
@@ -395,21 +396,20 @@ ZEND_FUNCTION(proj_transform_point) {
         RETURN_FALSE;
     }
 
-    coord = projCoord_static(srcProj, tgtProj, x, y, z);
+    coord = proj4_transform_coord_static(srcProj, tgtProj, x, y, z);
     RETVAL_ARR(Z_ARR(coord));
-    //return_value = projCoord_static(srcProj, tgtProj, x, y, z);
+    //return_value = proj4_transform_coord_static(srcProj, tgtProj, x, y, z);
 }
 
 /**
  * 
- * @param resource srcDefn
- * @param resource tgtDefn
+ * @param resource Proj
  * @param float x
  * @param float y
  * @param float z
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(proj6_transform_point) {
+ZEND_FUNCTION(proj_transform_point) {
 
     double x, y, z, t = 0;
     zval *src;
@@ -437,7 +437,7 @@ ZEND_FUNCTION(proj6_transform_point) {
     add_assoc_double(return_value, "x", c.xyz.x);
     add_assoc_double(return_value, "y", c.xyz.y);
     add_assoc_double(return_value, "z", c.xyz.z);
-    //*return_value = projCoord_static(P, x, y, z);
+    //*return_value = proj4_transform_coord_static(P, x, y, z);
 }
 
 /**
@@ -447,7 +447,7 @@ ZEND_FUNCTION(proj6_transform_point) {
  * @param array points-array
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(proj6_transform_array) {
+ZEND_FUNCTION(proj_transform_array) {
 
     /* method-params */
     zval xyz_arr, *zv, coord;
@@ -482,12 +482,12 @@ ZEND_FUNCTION(proj6_transform_array) {
             array_init(&xyz_arr);
             trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
             php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
-            coord = transformCoordArray6_static(P, xyz_arr);
+            coord = proj_transform_array_static(P, xyz_arr);
             zval_ptr_dtor(zv);
             zval_ptr_dtor(&xyz_arr);
         } else {
             //ZVAL_COPY_VALUE(&xyz_arr, zv);
-            coord = transformCoordArray6_static(P, *zv);
+            coord = proj_transform_array_static(P, *zv);
         }
 
         add_next_index_zval(return_value, &coord);
@@ -505,7 +505,7 @@ ZEND_FUNCTION(proj6_transform_array) {
  * @param array points-array
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(proj_transform_array) {
+ZEND_FUNCTION(proj4_transform_array) {
 
     /* method-params */
     zval xyz_arr, *zv, coord;
@@ -542,12 +542,12 @@ ZEND_FUNCTION(proj_transform_array) {
             array_init(&xyz_arr);
             trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
             php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
-            coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
+            coord = proj4_transform_array_static(srcProj, tgtProj, xyz_arr);
             zval_ptr_dtor(zv);
             zval_ptr_dtor(&xyz_arr);
         } else {
             //ZVAL_COPY_VALUE(&xyz_arr, zv);
-            coord = transformCoordArray_static(srcProj, tgtProj, *zv);
+            coord = proj4_transform_array_static(srcProj, tgtProj, *zv);
         }
 
         add_next_index_zval(return_value, &coord);
@@ -565,7 +565,7 @@ ZEND_FUNCTION(proj_transform_array) {
  * @param string geometry
  * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
  */
-ZEND_FUNCTION(proj_transform_string) {
+ZEND_FUNCTION(proj4_transform_string) {
 
     /* user-params */
     zval *srcDefn, *tgtDefn;
@@ -617,7 +617,81 @@ ZEND_FUNCTION(proj_transform_string) {
 
             php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
 
-            coord = transformCoordArray_static(srcProj, tgtProj, xyz_arr);
+            coord = proj4_transform_array_static(srcProj, tgtProj, xyz_arr);
+            add_next_index_zval(return_value, &coord);
+
+            // cleanup
+            //zval_ptr_dtor(zv);
+            zend_string_release(xyz_string);
+            zend_string_release(trimmed_point_string);
+            zval_ptr_dtor(&xyz_arr);
+        }
+        ZEND_HASH_FOREACH_END();
+    }
+
+    // cleanup
+    zval_ptr_dtor(&pts_arr);
+    zend_string_release(delimiter);
+    zend_string_release(delimiter2);
+    zend_string_release(trimmed_geom_string);
+}
+
+/**
+ * @param resource Proj
+ * @param string geometry
+ * @return mixed array ('x' => x, 'y' => y 'z' => z) or FALSE on error
+ */
+ZEND_FUNCTION(proj_transform_string) {
+
+    /* user-params */
+    zval *src;
+    zend_string *str, *xyz_string;
+
+    /* projection-params */
+    PJ *Proj;
+
+    /* coord-params */
+    zval pts_arr, xyz_arr;
+    zend_string *delimiter, *delimiter2, *trimmed_geom_string, *trimmed_point_string;
+    HashTable *pts_hash;
+    zval coord;
+    zval *zv;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+            Z_PARAM_RESOURCE(src)
+            Z_PARAM_STR(str)
+    ZEND_PARSE_PARAMETERS_END();
+
+    Proj = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ_RES_NAME, proj_destructor);
+
+    if (Proj == NULL) {
+        RETURN_FALSE;
+    }
+
+    array_init(return_value);
+
+    delimiter = zend_string_init(",", 1, 0);
+    delimiter2 = zend_string_init(" ", 1, 0);
+
+    // in einzelne Koordinaten zerteilen
+    array_init(&pts_arr);
+    trimmed_geom_string = php_trim(str, NULL, 0, 3);
+    php_explode(delimiter, trimmed_geom_string, &pts_arr, LONG_MAX);
+
+    if (Z_TYPE(pts_arr) == IS_ARRAY) {
+        pts_hash = Z_ARR(pts_arr);
+
+        ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
+            //convert_to_string_ex(zv);
+            xyz_string = zend_string_dup(Z_STR_P(zv), 0);
+
+            // split into in x,y,z
+            array_init(&xyz_arr);
+            trimmed_point_string = php_trim(xyz_string, NULL, 0, 3);
+
+            php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
+
+            coord = proj_transform_array_static(Proj, xyz_arr);
             add_next_index_zval(return_value, &coord);
 
             // cleanup

@@ -9,7 +9,7 @@ if (!extension_loaded('proj')) {
 --FILE--
 <?php
 
-$pj = proj_create('+proj=geocent +lat_0=49.5 +lon_0=24.83333333333333 +alpha=0 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel');
+$pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832');
 var_dump(proj_get_errno($pj));
 ?>
 --EXPECT--

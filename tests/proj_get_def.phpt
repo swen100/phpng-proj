@@ -8,12 +8,11 @@ if (!extension_loaded('proj')) {
 ?>
 --FILE--
 <?php
-$krovak_input = '+proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=0 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel';
-$pj = proj_create($krovak_input);
+$pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832');
 if ($pj === false) {
 	die(proj_get_errno_string(proj_get_errno($pj)));
 }
 var_dump(proj_get_def($pj));
 ?>
 --EXPECT--
-string(80) "proj=krovak lat_0=49.5 lon_0=24.83333333333333 k=0.9999 x_0=0 y_0=0 ellps=bessel"
+string(109) "proj=pipeline step inv proj=webmerc lat_0=0 lon_0=0 x_0=0 y_0=0 ellps=WGS84 step proj=utm zone=32 ellps=GRS80"
