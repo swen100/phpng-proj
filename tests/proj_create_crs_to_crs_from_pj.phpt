@@ -16,8 +16,13 @@ var_dump($pj);
 // with area
 $area = proj_area_create();
 proj_area_set_bbox($area,10,49,12,51);
-
 $pj = proj_create_crs_to_crs_from_pj($srcProj, $tgtProj, $area);
+var_dump($pj);
+
+// with proj-string
+$proj_wgs84 = proj_create("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+$proj_merc = proj_create("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +units=m +k=1.0 +nadgrids=@null +no_defs");
+$pj = proj_create_crs_to_crs_from_pj($proj_wgs84, $proj_merc);
 var_dump($pj);
 
 // invalid parameters
@@ -29,6 +34,8 @@ $pj = proj_create_crs_to_crs_from_pj($srcProj, $tgtProj, []);
 --EXPECTF--
 resource(%d) of type (Proj)
 resource(%d) of type (Proj)
+proj_create_operations: source_crs is not a CRS
+bool(false)
 
 Warning: proj_create_crs_to_crs_from_pj() expects parameter 1 to be resource, array given in %s
 

@@ -8,7 +8,14 @@ if (!extension_loaded('proj')) {
 ?>
 --FILE--
 <?php
+// with EPSG-code
 $pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832');
+var_dump($pj);
+
+// with proj-string
+$proj_wgs84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+$proj_merc = "+proj=merc +a=6378137 +b=6378137 +units=m +k=1.0 +nadgrids=@null +no_defs";
+$pj = proj_create_crs_to_crs($proj_wgs84, $proj_merc);
 var_dump($pj);
 
 // with area
@@ -31,9 +38,10 @@ try {
 var_dump($pj);
 ?>
 --EXPECTF--
-resource(4) of type (Proj)
-resource(5) of type (Area)
-resource(6) of type (Proj)
+resource(%d) of type (Proj)
+resource(%d) of type (Proj)
+resource(%d) of type (Area)
+resource(%d) of type (Proj)
 
 Warning: proj_create_crs_to_crs() expects parameter 3 to be resource, array given in %s
 proj_create: Error -5 (unknown projection id)
