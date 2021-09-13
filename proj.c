@@ -26,6 +26,7 @@ static zend_function_entry proj_functions[] = {
     ZEND_FE(proj_is_latlong, NULL)
     ZEND_FE(proj_is_geocent, NULL)
     ZEND_FE(proj_get_def, NULL)
+    ZEND_FE(proj_get_pj_info, NULL)
     ZEND_FE(proj_get_errno, NULL)
     ZEND_FE(proj_get_errno_string, NULL)
     ZEND_FE(proj_get_release, NULL)
@@ -848,6 +849,38 @@ ZEND_FUNCTION(proj_get_def)
     }
 
     RETURN_FALSE;
+}
+
+/**
+ * 
+ * @param resource projection
+ * @param long
+ * @return mixed array or false on error
+ */
+ZEND_FUNCTION(proj_get_pj_info)
+{
+    PJ_PROJ_INFO result;
+    zval *zpj;
+    PJ *pj;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+            Z_PARAM_RESOURCE(zpj)
+    ZEND_PARSE_PARAMETERS_END();
+
+    pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
+
+    if (pj == NULL) {
+        RETURN_FALSE;
+    }
+    
+    array_init(return_value);
+    result = proj_pj_info(pj);
+
+    add_assoc_string(return_value, "id", result.id ? result.id : "");
+    add_assoc_string(return_value, "definition", result.definition);
+    add_assoc_string(return_value, "description", result.description);
+    add_assoc_double(return_value, "accuracy", result.accuracy);
+    add_assoc_long(return_value, "has_inverse", result.has_inverse);
 }
 
 /*###########################################################################

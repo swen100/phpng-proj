@@ -13,7 +13,7 @@ A php extension to be usable with PHP7+ and next generation of libProj (6+).
 ### Basic API
 
 **resource proj_create(string definition);**
-Create a Proj resource coordinate system object from the projection definition suitable for use with proj_create_crs_to_crs_from_pj(). Be aware: the definitions used for proj_create have then to be in form of EPSG:xxx!
+Create a Proj resource coordinate system object from the projection definition suitable for use with proj_create_crs_to_crs_from_pj(). Be aware: the definitions used for proj_create have then to be in form of "EPSG:xxx"!
 
 **resource proj_create_crs_to_crs(string srcCrs, string tgtCrs);**
 Create a Proj resource coordinate system object from the source SRID and target SRID.

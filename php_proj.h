@@ -34,6 +34,7 @@ ZEND_FUNCTION(proj_transform_point);
 ZEND_FUNCTION(proj_is_latlong);
 ZEND_FUNCTION(proj_is_geocent);
 ZEND_FUNCTION(proj_get_def);
+ZEND_FUNCTION(proj_get_pj_info);
 ZEND_FUNCTION(proj_get_errno);
 ZEND_FUNCTION(proj_get_errno_string);
 ZEND_FUNCTION(proj_get_release);
