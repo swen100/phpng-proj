@@ -8,7 +8,7 @@
 #include <zend_types.h>
 #include <zend_string.h>
 #include <ext/standard/php_string.h>
-#include <php_proj.h>
+#include <src/php_proj.h>
 
 int proj_destructor;
 int proj_area_destructor;

@@ -1,6 +1,8 @@
 ARG_WITH("proj", "PROJ module", "no");
 
 if (PHP_PROJ == "yes") {
+    configure_module_dirname = configure_module_dirname + "\\src";
+
     CHECK_HEADER_ADD_INCLUDE("proj/proj_api.h", "CFLAGS_PROJ", PHP_PROJ + "\\include", null, true);
     CHECK_LIB("proj.lib", "proj", PHP_PROJ + "\\lib")
     
