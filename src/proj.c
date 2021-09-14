@@ -282,14 +282,14 @@ ZEND_FUNCTION(proj_create_crs_to_crs)
         RETURN_FALSE;
     }
 
-    /* For that particular use case, this is not needed. */
-    /* proj_normalize_for_visualization() ensures that the coordinate */
-    /* order expected and returned by proj_trans() will be longitude, */
-    /* latitude for geographic CRS, and easting, northing for projected */
-    /* CRS. If instead of using PROJ strings as above, "EPSG:XXXX" codes */
-    /* had been used, this might had been necessary. */
+    /* For that particular use case, this is not needed.
+       proj_normalize_for_visualization() ensures that the coordinate
+       order expected and returned by proj_trans() will be longitude,
+       latitude for geographic CRS, and easting, northing for projected
+       CRS. If instead of using PROJ strings, "EPSG:XXXX" codes had been used,
+       this might had been necessary. */
     PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
-    if( 0 != Proj_for_GIS )  {
+    if( NULL != Proj_for_GIS )  {
         //proj_destroy(Proj);
         Proj = Proj_for_GIS;
     }
@@ -345,14 +345,14 @@ ZEND_FUNCTION(proj_create_crs_to_crs_from_pj)
         RETURN_FALSE;
     }
 
-    /* For that particular use case, this is not needed. */
-    /* proj_normalize_for_visualization() ensures that the coordinate */
-    /* order expected and returned by proj_trans() will be longitude, */
-    /* latitude for geographic CRS, and easting, northing for projected */
-    /* CRS. If instead of using PROJ strings as above, "EPSG:XXXX" codes */
-    /* had been used, this might had been necessary. */
+    /* For that particular use case, this is not needed.
+       proj_normalize_for_visualization() ensures that the coordinate
+       order expected and returned by proj_trans() will be longitude,
+       latitude for geographic CRS, and easting, northing for projected
+       CRS. If instead of using PROJ strings, "EPSG:XXXX" codes had been used,
+       this might had been necessary. */
     PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
-    if( 0 != Proj_for_GIS )  {
+    if( NULL != Proj_for_GIS )  {
         //proj_destroy(Proj);
         Proj = Proj_for_GIS;
     }
