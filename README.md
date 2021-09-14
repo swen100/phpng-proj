@@ -21,6 +21,12 @@ Create a Proj resource coordinate system object from the source SRID and target 
 **resource proj_create_crs_to_crs_from_pj(resource srcPj, resource tgtPj);**
 Create a Proj resource coordinate system object from the source PROJ and target PROJ.
 
+**resource proj_area_create()**
+Create an area of use. Such an area of use is to be passed to proj_create_crs_to_crs() to specify the area of use for the choice of relevant coordinate operations.
+
+**void proj_area_set_bbox(resource area, float west_lon_degree, float south_lat_degree, float east_lon_degree, float north_lat_degree)**
+Set the bounding box of the area of use. In the case of an area of use crossing the antimeridian (longitude +/- 180 degrees), west_lon_degree will be greater than east_lon_degree. Lon is in range of -180 to 180 degrees and lat is in range of -90 to 90 degrees.
+
 **array proj_transform_point(resource pj, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the previously set coordinate systems (source, target) within projection.
 x, y and z can be double, int or a numeric string.
@@ -46,6 +52,10 @@ Returns true if the output coordinate system is geocentric (proj=geocent).
 **string proj_get_def(resource pj);**
 Returns the PROJ initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
 
+**array proj_get_pj_info(resource pj)**
+Returns an array with multiple informations about the projection object: id, definition, description, accuracy, has_inverse.
+
+
 ### Environment Functions
 
 **string proj_get_errno_string(int);**
@@ -59,6 +69,13 @@ Returns an array with informations about the current PROJ library.
 
 **string proj_get_release();**
 Returns an internal string describing the release version.
+
+**array proj_list_units()**
+Returns an array of globally defined distance units.
+
+**array proj_list_ellps()**
+Returns an array of globally defined ellipsoids.
+
 
 ## Code examples
 
@@ -75,29 +92,29 @@ Transforming variables with x and y [and z] values.
 ```php
 <?php  
 	if ($PROJ !== false) {  
-	    $x = 1224526;
-	    $y = 6621326;
-	    $transformed = proj_transform_point($PROJ, $x, $y);  
-	    print 'latitude: '.$transformed['x'].'<br />';  
-	    print 'longitude: '.$transformed['y'].'<br />';  
+	    $x = 11;
+	    $y = 51;
+	    $transformed = proj_transform_point($PROJ, $x, $y);
+	    print 'latitude: '.$transformed['x'].'<br />';
+	    print 'longitude: '.$transformed['y'].'<br />';
 	}
 ?>
 ```
 
 **Output:**
 ```
-	latitude: 11.000104216017
-	longitude: 51.000182472069
+	latitude: 1224514.398726
+	longitude: 6621293.7227402
 ```
 
 ### example 2:
 Transforming a string containing x,y[,z]-values.
 ```php
 <?php  
-	if ($PROJ !== false) {  
+	if ($PROJ !== false) {
 	    $coords = "11 51,11.5 51.5 20";
-	    $transformed = proj_transform_string($PROJ, $coords);  
-	    print_r($transformed);  
+	    $transformed = proj_transform_string($PROJ, $coords);
+	    print_r($transformed);
 	}
 ?>
 ```
@@ -127,10 +144,10 @@ Transforming a string containing x,y[,z]-values.
 Transforming an array containing x,y[,z]-values as strings.
 ```php
 <?php  
-	if ($PROJ !== false) {  
+	if ($PROJ !== false) {
 	    $coords = ["11 51", "11.5 51.5 20"];
 	    $transformed = proj_transform_array( $PROJ, $coords );
-	    print_r($transformed);  
+	    print_r($transformed);
 	}
 ?>
 ```
@@ -163,7 +180,7 @@ Transforming an array containing x,y[,z]-values as arrays.
 	if ($PROJ !== false) {  
 	    $coords = [[11, 51], [11.5, 51.5, 20]];
 	    $transformed = proj_transform_array( $PROJ, $coords );
-	    print_r($transformed);  
+	    print_r($transformed);
 	}
 ?>
 ```
