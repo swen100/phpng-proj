@@ -10,14 +10,14 @@ if (!extension_loaded('proj')) {
 <?php
 $pj = proj_create('+proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=0 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel');
 if ($pj === false) {
-	die(proj_get_errno_string(proj_get_errno($pj)));
+    die(proj_get_errno_string(proj_get_errno($pj)));
 }
 var_dump($pj);
 
 $pj = proj_create('+proj=foo');
 var_dump($pj);
 ?>
---EXPECT--
+--EXPECTF--
 resource(4) of type (Proj)
-proj_create: Error -5 (unknown projection id)
+proj_create: Error %i (%s)%S
 bool(false)

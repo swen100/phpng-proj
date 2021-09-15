@@ -44,5 +44,5 @@ resource(%d) of type (Area)
 resource(%d) of type (Proj)
 
 Warning: proj_create_crs_to_crs() expects parameter 3 to be resource, array given in %s
-proj_create: Error -5 (unknown projection id)
+proj_create: Error %i (%s)%S
 bool(false)

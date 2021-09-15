@@ -1,5 +1,5 @@
 --TEST--
-proj_strerrno() function - basic test for proj_strerrno()
+proj_get_errno_string() function - basic test for proj_get_errno_string()
 --SKIPIF--
 <?php
 if (!extension_loaded('proj')) {
@@ -8,10 +8,12 @@ if (!extension_loaded('proj')) {
 ?>
 --FILE--
 <?php
-#$pj = proj_create('foo');
-#$ref = proj_get_errno($pj);
-var_dump(proj_get_errno_string(-1));
+if (proj_get_info()['major']>7) {
+    var_dump(proj_get_errno_string(1024));
+} else {
+    var_dump(proj_get_errno_string(-1));
+}
 #unset($pj);
 ?>
---EXPECT--
-string(35) "no arguments in initialization list"
+--EXPECTF--
+string(%d) "%s"

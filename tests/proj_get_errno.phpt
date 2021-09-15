@@ -12,5 +12,5 @@ if (!extension_loaded('proj')) {
 $pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832');
 var_dump(proj_get_errno($pj));
 ?>
---EXPECT--
-int(0)
+--EXPECTF--
+int(%d)
