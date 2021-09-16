@@ -9,6 +9,7 @@
 #include <zend_string.h>
 #include <ext/standard/php_string.h>
 #include <src/php_proj.h>
+#include <php/Zend/zend_exceptions.h>
 
 int proj_destructor;
 int proj_area_destructor;
@@ -149,10 +150,10 @@ static zval proj4_transform_coord_static(PJ *srcProj, PJ *tgtProj, double x, dou
     return coord;
 }
 
-static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
+static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval *xyz_arr)
 {
     zval *x, *y, z, *t, coord;
-    HashTable *xyz_hash = Z_ARR(xyz_arr);
+    HashTable *xyz_hash = Z_ARR_P(xyz_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
@@ -161,7 +162,6 @@ static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
             ZVAL_DOUBLE(&z, 0.0);
         } else {
             ZVAL_COPY_VALUE(&z, t);
-            zval_dtor(t);
             convert_to_double_ex(&z);
         }
 
@@ -169,8 +169,6 @@ static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
         convert_to_double_ex(y);
 
         coord = proj4_transform_coord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
-        zval_dtor(x);
-        zval_dtor(y);
         return coord;
     }
 
@@ -181,31 +179,29 @@ static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval xyz_arr)
     return coord;
 }
 
-static zval proj_transform_array_static(PJ *Proj, zval xyz_arr)
+static zval proj_transform_array_static(PJ *Proj, zval *xyz_arr)
 {
     zval *x, *y, z, *t, coord;
-    double cx, cy, cz = 0;
+    double cx = 0.0, cy = 0.0, cz = 0.0;
     PJ_COORD c;
-    HashTable *xyz_hash = Z_ARR(xyz_arr);
+    HashTable *xyz_hash = Z_ARR_P(xyz_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
-
+        
         if (NULL == (t = zend_hash_index_find(xyz_hash, 2))) {
             ZVAL_DOUBLE(&z, 0.0);
         } else {
             ZVAL_COPY_VALUE(&z, t);
-            zval_dtor(t);
             convert_to_double_ex(&z);
         }
 
         convert_to_double_ex(x);
         convert_to_double_ex(y);
-        
+
         c = proj_coord(Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z), 0);
         c = proj_trans(Proj, PJ_FWD, c);
-        zval_dtor(x);
-        zval_dtor(y);
+
         cx = c.xyz.x;
         cy = c.xyz.y;
         cz = c.xyz.z;
@@ -538,24 +534,23 @@ ZEND_FUNCTION(proj_transform_array) {
 
     array_init(return_value);
     delimiter = zend_string_init(" ", 1, 0);
-    HashTable *pts_hash = Z_ARR_P(xyz_arr_p);
 
-    ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-
-        // in x,y,z-Array zerteilen
+    ZEND_HASH_FOREACH_VAL(Z_ARR_P(xyz_arr_p), zv) {
+        
+        // split into x,y,z-array
         if (Z_TYPE_P(zv) != IS_ARRAY) {
+            // needed to make sure we have a string. Throws an error if not.
             convert_to_string_ex(zv);
             array_init(&xyz_arr);
             trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
             php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
-            coord = proj_transform_array_static(P, xyz_arr);
+            coord = proj_transform_array_static(P, &xyz_arr);
             zval_ptr_dtor(zv);
             zval_ptr_dtor(&xyz_arr);
         } else {
-            //ZVAL_COPY_VALUE(&xyz_arr, zv);
-            coord = proj_transform_array_static(P, *zv);
+            coord = proj_transform_array_static(P, zv);
         }
-
+        
         add_next_index_zval(return_value, &coord);
     }
     ZEND_HASH_FOREACH_END();
@@ -602,18 +597,18 @@ ZEND_FUNCTION(proj4_transform_array) {
 
     ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
 
-        // split into in x,y,z-Array
+        // split into into x,y,z-Array
         if (Z_TYPE_P(zv) != IS_ARRAY) {
+            // needed to make sure we have a string. Throws an error if not.
             convert_to_string_ex(zv);
             array_init(&xyz_arr);
             trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
             php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
-            coord = proj4_transform_array_static(srcProj, tgtProj, xyz_arr);
+            coord = proj4_transform_array_static(srcProj, tgtProj, &xyz_arr);
             zval_ptr_dtor(zv);
             zval_ptr_dtor(&xyz_arr);
         } else {
-            //ZVAL_COPY_VALUE(&xyz_arr, zv);
-            coord = proj4_transform_array_static(srcProj, tgtProj, *zv);
+            coord = proj4_transform_array_static(srcProj, tgtProj, zv);
         }
 
         add_next_index_zval(return_value, &coord);
@@ -635,7 +630,7 @@ ZEND_FUNCTION(proj4_transform_string) {
 
     /* user-params */
     zval *srcDefn, *tgtDefn;
-    zend_string *str, *xyz_string;
+    zend_string *str;
 
     /* projection-params */
     PJ *srcProj, *tgtProj;
@@ -674,21 +669,19 @@ ZEND_FUNCTION(proj4_transform_string) {
         pts_hash = Z_ARR(pts_arr);
 
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-            //convert_to_string_ex(zv);
-            xyz_string = zend_string_dup(Z_STR_P(zv), 0);
+            // needed to make sure we have a string. Throws an error if not.
+            convert_to_string_ex(zv);
 
             // split into in x,y,z
             array_init(&xyz_arr);
-            trimmed_point_string = php_trim(xyz_string, NULL, 0, 3);
+            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
 
             php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
 
-            coord = proj4_transform_array_static(srcProj, tgtProj, xyz_arr);
+            coord = proj4_transform_array_static(srcProj, tgtProj, &xyz_arr);
             add_next_index_zval(return_value, &coord);
 
             // cleanup
-            //zval_ptr_dtor(zv);
-            zend_string_release(xyz_string);
             zend_string_release(trimmed_point_string);
             zval_ptr_dtor(&xyz_arr);
         }
@@ -711,7 +704,7 @@ ZEND_FUNCTION(proj_transform_string) {
 
     /* user-params */
     zval *src;
-    zend_string *str, *xyz_string;
+    zend_string *str;
 
     /* projection-params */
     PJ *Proj;
@@ -748,21 +741,18 @@ ZEND_FUNCTION(proj_transform_string) {
         pts_hash = Z_ARR(pts_arr);
 
         ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-            //convert_to_string_ex(zv);
-            xyz_string = zend_string_dup(Z_STR_P(zv), 0);
-
+            convert_to_string_ex(zv);
+            
             // split into in x,y,z
             array_init(&xyz_arr);
-            trimmed_point_string = php_trim(xyz_string, NULL, 0, 3);
+            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
 
             php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
 
-            coord = proj_transform_array_static(Proj, xyz_arr);
+            coord = proj_transform_array_static(Proj, &xyz_arr);
             add_next_index_zval(return_value, &coord);
 
             // cleanup
-            //zval_ptr_dtor(zv);
-            zend_string_release(xyz_string);
             zend_string_release(trimmed_point_string);
             zval_ptr_dtor(&xyz_arr);
         }
