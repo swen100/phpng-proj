@@ -9,7 +9,6 @@
 #include <zend_string.h>
 #include <ext/standard/php_string.h>
 #include <src/php_proj.h>
-#include <php/Zend/zend_exceptions.h>
 
 int proj_destructor;
 int proj_area_destructor;
@@ -327,7 +326,7 @@ ZEND_FUNCTION(proj_create_crs_to_crs_from_pj)
     tgtP = (PJ*) zend_fetch_resource_ex(tgt_crs, PHP_PROJ_RES_NAME, proj_destructor);
     
     if (srcP == NULL || tgtP == NULL) {
-        RETURN_FALSE
+        RETURN_FALSE;
     }
     
     if (proj_area && proj_area != NULL) {
