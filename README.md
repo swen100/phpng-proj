@@ -53,8 +53,13 @@ Returns true if the output coordinate system is geocentric (proj=geocent).
 Returns the PROJ initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
 
 **array proj_get_pj_info(resource pj);**
-Returns an array with multiple informations about the projection object: id, definition, description, accuracy, has_inverse.
+Returns an array with multiple informations about the projection object:
 
+  - *id* (short ID of the operation the PJ object is based on, that is, what comes after the +proj= in a proj-string, e.g. “merc”.)
+  - *definition* (long description of the operation the PJ object is based on, e.g. “Mercator Cyl, Sph&Ell lat_ts=”.)
+  - *description* (the proj-string that was used to create the PJ object with, e.g. “+proj=merc +lat_0=24 +lon_0=53 +ellps=WGS84”.)
+  - *accuracy* (expected accuracy of the transformation. -1 if unknown.)
+  - *has_inverse* (1 if an inverse mapping of the defined operation exists, otherwise 0.)
 
 ### Environment Functions
 
