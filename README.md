@@ -2,7 +2,7 @@
 
 A php extension to be usable with PHP7+ and next generation of libProj (6+).
 
-[![Build Status](https://travis-ci.com/swen100/phpng-proj.svg?branch=proj6+)](https://travis-ci.com/swen100/phpng-proj)
+[![Build Status](https://app.travis-ci.com/swen100/phpng-proj.svg?branch=master)](https://app.travis-ci.com/swen100/phpng-proj)
 
 ### Installation
 
