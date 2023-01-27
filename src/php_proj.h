@@ -8,7 +8,7 @@
 #ifndef PHP_PROJ_H
 #define PHP_PROJ_H 1
 
-#define PHP_PROJ_VERSION "3.0"
+#define PHP_PROJ_VERSION "3.0.3"
 #define PHP_PROJ_EXTNAME "proj"
 #define PHP_PROJ_RES_NAME "Proj"
 #define PHP_PROJ_AREA_RES_NAME "Area"
@@ -43,6 +43,10 @@ ZEND_FUNCTION(proj_list_units);
 ZEND_FUNCTION(proj_list_ellps);
 ZEND_FUNCTION(proj_area_create);
 ZEND_FUNCTION(proj_area_set_bbox);
+ZEND_FUNCTION(proj_distance_lp);
+ZEND_FUNCTION(proj_distance_lpz);
+ZEND_FUNCTION(proj_distance_xy);
+ZEND_FUNCTION(proj_distance_xyz);
 ZEND_FUNCTION(proj_free);
 
 extern zend_module_entry proj_module_entry;

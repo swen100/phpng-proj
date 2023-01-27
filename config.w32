@@ -1,13 +1,25 @@
+// vim:ft=javascript
+
 ARG_WITH("proj", "PROJ module", "no");
 
 if (PHP_PROJ == "yes") {
-    configure_module_dirname = configure_module_dirname + "\\src";
-
-    CHECK_HEADER_ADD_INCLUDE("proj/proj_api.h", "CFLAGS_PROJ", PHP_PROJ + "\\include", null, true);
-    CHECK_LIB("proj.lib", "proj", PHP_PROJ + "\\lib")
-    
-	EXTENSION("proj", "proj.c");
-	AC_DEFINE('HAVE_PROJ', 1, 'Have proj module');
-    
-    PHP_INSTALL_HEADERS("ext/proj/", "php_proj.h");
+	if((
+                CHECK_HEADER_ADD_INCLUDE("proj_api.h", "CFLAGS_PROJ", PHP_PROJ) ||
+                // With the release of PROJ 8 the proj_api.h API is finally removed.
+                CHECK_HEADER_ADD_INCLUDE("proj.h", "CFLAGS_PROJ", PHP_PROJ)) && 
+                CHECK_LIB("proj.lib", "proj", PHP_PROJ)
+        ) {
+            if (get_define('PHPDLL').match(/^php[78]/) != null) {
+                    var old_conf_dir = configure_module_dirname;
+                    configure_module_dirname = configure_module_dirname + "\\src";
+                    EXTENSION("proj", "proj.c");
+                    AC_DEFINE('HAVE_PROJ', 1, 'Have proj module');
+                    PHP_INSTALL_HEADERS("ext/proj/", "php_proj.h");
+                    configure_module_dirname = old_conf_dir;
+            } else {
+                    WARNING("proj support can't be enabled: " + dll + " unsupported")
+            }
+	} else {
+                WARNING("proj support can't be enabled: libraries or headers are missing")
+	}
 }
