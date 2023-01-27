@@ -27,7 +27,11 @@ $pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832', $area);
 var_dump($pj);
 
 // no area
-$pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832', []);
+try {
+    $pj = proj_create_crs_to_crs('EPSG:3857', 'EPSG:25832', []);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
 
 try {
     $pj = proj_create_crs_to_crs('+proj=foo','EPSG:4326');
@@ -42,7 +46,6 @@ resource(%d) of type (Proj)
 resource(%d) of type (Proj)
 resource(%d) of type (Area)
 resource(%d) of type (Proj)
-
-Warning: proj_create_crs_to_crs() expects parameter 3 to be resource, array given in %s
+proj_create_crs_to_crs(): Argument #3 ($proj_area) must be of type resource, array given
 proj_create: Error %i (%s)%S
 bool(false)

@@ -26,9 +26,23 @@ $pj = proj_create_crs_to_crs_from_pj($proj_wgs84, $proj_merc);
 var_dump($pj);
 
 // invalid parameters
-$pj = proj_create_crs_to_crs_from_pj([], $tgtProj);
-$pj = proj_create_crs_to_crs_from_pj($srcProj, []);
-$pj = proj_create_crs_to_crs_from_pj($srcProj, $tgtProj, []);
+try {
+    $pj = proj_create_crs_to_crs_from_pj([], $tgtProj);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+try {
+    $pj = proj_create_crs_to_crs_from_pj($srcProj, []);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+try {
+    $pj = proj_create_crs_to_crs_from_pj($srcProj, $tgtProj, []);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
 
 ?>
 --EXPECTF--
@@ -36,9 +50,6 @@ resource(%d) of type (Proj)
 resource(%d) of type (Proj)
 proj_create_operations: source_crs is not a CRS
 bool(false)
-
-Warning: proj_create_crs_to_crs_from_pj() expects parameter 1 to be resource, array given in %s
-
-Warning: proj_create_crs_to_crs_from_pj() expects parameter 2 to be resource, array given in %s
-
-Warning: proj_create_crs_to_crs_from_pj() expects parameter 3 to be resource, array given in %s
+proj_create_crs_to_crs_from_pj(): Argument #1 ($src_crs) must be of type resource, array given
+proj_create_crs_to_crs_from_pj(): Argument #2 ($tgtc_crs) must be of type resource, array given
+proj_create_crs_to_crs_from_pj(): Argument #3 ($proj_area) must be of type resource, array given

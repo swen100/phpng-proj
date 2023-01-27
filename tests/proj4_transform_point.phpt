@@ -18,55 +18,77 @@ if ($proj_wgs84 === false) {
 }
 
 // strings
-$x = "1224514.398726";
-$y = "6621293.7227402";
+$x = "1224520";
+$y = "6621300";
 $p = proj4_transform_point($proj_merc, $proj_wgs84, $x, $y);
 var_dump($p);
 
 // float
-$x = 1224514.398726;
-$y = 6621293.7227402;
+$x = 1224520.0;
+$y = 6621300.0;
 $p = proj4_transform_point($proj_merc, $proj_wgs84, $x, $y);
 var_dump($p);
 
 try {
     proj4_transform_point($proj_merc);
-    proj4_transform_point($proj_merc, $proj_wgs84);
-    proj4_transform_point($proj_merc, $proj_wgs84, $x);
-    proj4_transform_point(null, $proj_wgs84, $x, $y);
-    proj4_transform_point($proj_merc, null, $x, $y);
-    proj4_transform_point($proj_merc, $proj_wgs84, null, $y);
-    proj4_transform_point($proj_merc, $proj_wgs84, $x, []);
-} catch (Exception $e) {
-    echo $e->getMessage();
+} catch (ArgumentCountError $exc) {
+    echo $exc->getMessage() . "\n";
 }
+
+try {
+    proj4_transform_point($proj_merc, $proj_wgs84);
+} catch (ArgumentCountError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+try {
+    proj4_transform_point($proj_merc, $proj_wgs84, $x);
+} catch (ArgumentCountError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+try {
+    proj4_transform_point(null, $proj_wgs84, $x, $y);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+try {
+    proj4_transform_point($proj_merc, null, $x, $y);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+try {
+    proj4_transform_point($proj_merc, $proj_wgs84, null, $y);
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "\n";
+}
+
+
+
 ?>
 --EXPECTF--
 array(3) {
   ["x"]=>
-  float(11)
+  float(11.%d)
   ["y"]=>
-  float(51)
+  float(51.%d)
   ["z"]=>
   float(0)
 }
 array(3) {
   ["x"]=>
-  float(11)
+  float(11.%d)
   ["y"]=>
-  float(51)
+  float(51.%d)
   ["z"]=>
   float(0)
 }
+proj4_transform_point() expects at least 4 arguments, 1 given
+proj4_transform_point() expects at least 4 arguments, 2 given
+proj4_transform_point() expects at least 4 arguments, 3 given
+proj4_transform_point(): Argument #1 ($src) must be of type resource, null given
+proj4_transform_point(): Argument #2 ($tgt) must be of type resource, null given
 
-Warning: proj4_transform_point() expects at least 4 parameters, 1 given in %s
-
-Warning: proj4_transform_point() expects at least 4 parameters, 2 given in %s
-
-Warning: proj4_transform_point() expects at least 4 parameters, 3 given in %s
-
-Warning: proj4_transform_point() expects parameter 1 to be resource, null given in %s
-
-Warning: proj4_transform_point() expects parameter 2 to be resource, null given in %s
-
-Warning: proj4_transform_point() expects parameter 4 to be float, array given in %s
+Deprecated: proj4_transform_point(): Passing null to parameter #3 ($x) of type float is deprecated in %s
