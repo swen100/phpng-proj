@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: jammy
 
 language: php
 
@@ -8,10 +8,12 @@ php:
   - 7.1
   - 7.2
   - 7.3
-
+  - 7.4
+  - 8.0
+    
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libproj-dev/7.1
+  - sudo apt-get install -y libproj-dev
 
 install:
   - phpize
@@ -19,8 +21,13 @@ install:
   - make install
 
 before_script:
-  - echo "extension = proj.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+  - echo "extension=proj.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   - phpenv config-rm xdebug.ini
 
 script:
+  make test
   - php phpng-proj.php
+
+notifications:
+  email:
+    swen.zanon@geoglis.de
