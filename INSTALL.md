@@ -10,9 +10,6 @@ make sure the following package is installed: libproj-dev
 git clone https://github.com/swen100/phpng-proj
 cd phpng-proj
 
-# if it´s not the master already
-git checkout proj5+
-
 # Build and install the extension
 phpize
 ./configure
@@ -28,6 +25,6 @@ make clean
 phpize --clean
 ```
 
-create the file 'proj.ini' in '/etc/php7/conf.d' with the following content: 'extension=proj.so'
+create the file 'proj.ini' in '/etc/php8/conf.d' with the following content: 'extension=proj.so'
 
-restart your webserver or php7-fpm.
+restart your webserver or php8-fpm.
