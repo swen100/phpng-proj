@@ -6,7 +6,7 @@ A php extension to be usable with PHP7+ and next generation of libProj (6+).
 
 ### Installation
 
-[see INSTALL.md](INSTALL)
+[see INSTALL.md](INSTALL.md)
 
 ## API Functions
 
