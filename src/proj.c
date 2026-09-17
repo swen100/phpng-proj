@@ -1187,6 +1187,78 @@ ZEND_FUNCTION(proj_list_ellps)
     }
 }
 
+/**
+ * Set PROJ resource search paths.
+ * seit PROJ 6.0
+ *
+ * PHP:
+ * proj_context_set_search_paths(array $paths): bool
+ */
+ZEND_BEGIN_ARG_INFO(proj_context_set_search_paths_args, ZEND_SEND_BY_VAL)
+    ZEND_ARG_INFO(0, paths)
+ZEND_END_ARG_INFO()
+
+ZEND_FUNCTION(proj_context_set_search_paths)
+{
+    zval *zpaths;
+    HashTable *ht;
+    zval *entry;
+
+    const char **paths = NULL;
+    int count;
+    int i = 0;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ARRAY(zpaths)
+    ZEND_PARSE_PARAMETERS_END();
+
+    ht = Z_ARRVAL_P(zpaths);
+    count = (int) zend_hash_num_elements(ht);
+
+    /*
+     * Leeres Array:
+     * explizite Suchpfade wieder zurücksetzen.
+     */
+    if (count == 0) {
+        proj_context_set_search_paths(PJ_DEFAULT_CTX, 0, NULL);
+        RETURN_TRUE;
+    }
+
+    paths = safe_emalloc(count, sizeof(char *), 0);
+
+    ZEND_HASH_FOREACH_VAL(ht, entry) {
+
+        if (Z_TYPE_P(entry) != IS_STRING) {
+            efree(paths);
+
+            php_error_docref(
+                NULL,
+                E_WARNING,
+                "All search paths must be strings"
+            );
+
+            RETURN_FALSE;
+        }
+
+        paths[i++] = Z_STRVAL_P(entry);
+
+    } ZEND_HASH_FOREACH_END();
+
+    /*
+     * PJ_DEFAULT_CTX entspricht dem von der Erweiterung
+     * ohnehin verwendeten PROJ Default Context.
+     */
+    proj_context_set_search_paths(
+        PJ_DEFAULT_CTX,
+        count,
+        paths
+    );
+
+    efree(paths);
+
+    RETURN_TRUE;
+}
+
 
 /* ----------------------------------------------------------------
     Proj Definition and registration
@@ -1213,6 +1285,7 @@ static const zend_function_entry proj_functions[] = {
     ZEND_FE(proj_get_errno_string, proj_get_errno_string_args)
     ZEND_FE(proj_get_release, Proj_method_no_args)
     ZEND_FE(proj_get_info, Proj_method_no_args)
+	ZEND_FE(proj_context_set_search_paths, proj_context_set_search_paths_args)
     ZEND_FE(proj_list_units, Proj_method_no_args)
     ZEND_FE(proj_list_ellps, Proj_method_no_args)
     ZEND_FE(proj_area_create, Proj_method_no_args)

@@ -48,6 +48,7 @@ ZEND_FUNCTION(proj_distance_lpz);
 ZEND_FUNCTION(proj_distance_xy);
 ZEND_FUNCTION(proj_distance_xyz);
 ZEND_FUNCTION(proj_free);
+ZEND_FUNCTION(proj_context_set_search_paths);
 
 extern zend_module_entry proj_module_entry;
 #define phpext_proj_ptr &proj_module_entry
