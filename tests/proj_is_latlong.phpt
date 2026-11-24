@@ -19,7 +19,23 @@ if ($pj === false) {
 	die(proj_get_errno_string(proj_get_errno($pj)));
 }
 var_dump(proj_is_latlong($pj));
+
+proj_free($pj);
+try {
+    var_dump(proj_is_latlong($pj));
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "
+";
+}
+try {
+    var_dump(proj_is_geocent(proj_area_create()));
+} catch (TypeError $exc) {
+    echo $exc->getMessage() . "
+";
+}
 ?>
 --EXPECT--
 bool(true)
 bool(false)
+proj_is_latlong(): supplied resource is not a valid Proj resource
+proj_is_geocent(): supplied resource is not a valid Proj resource

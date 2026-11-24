@@ -48,4 +48,6 @@ resource(%d) of type (Area)
 resource(%d) of type (Proj)
 proj_create_crs_to_crs(): Argument #3 ($proj_area) must be of type resource, array given
 proj_create: Error %i (%s)%S
+
+Warning: proj_create_crs_to_crs(): %s in %s on line %d
 bool(false)

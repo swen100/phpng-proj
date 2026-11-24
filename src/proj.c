@@ -3,7 +3,6 @@
 #endif
 
 #include "php.h"
-#include "php_ini.h"
 #include "ext/standard/info.h"
 #include "ext/standard/php_string.h"
 #include "php_proj.h"
@@ -11,104 +10,168 @@
 int proj_destructor;
 int proj_area_destructor;
 
+ZEND_DECLARE_MODULE_GLOBALS(proj)
+
+#if defined(ZTS) && defined(COMPILE_DL_PROJ)
+ZEND_TSRMLS_CACHE_DEFINE()
+#endif
+
 
 /*###########################################################################
   Internal static Functions
   ###########################################################################
  */
-static zval proj4_transform_coord_static(PJ *srcProj, PJ *tgtProj, double x, double y, double z)
+
+/*
+ * Reads x, y and an optional z from an array [x, y(, z)] or a string "x y( z)".
+ * Missing z is 0. Returns 0 if fewer than two coordinates are found.
+ * The input is never modified: it belongs to the caller and may live in read-only OPcache memory.
+ */
+static int php_proj_read_point(zval *zv, double *xyz)
 {
-    PJ_COORD a, b;
-    zval coord;
+    xyz[2] = 0.0;
+    ZVAL_DEREF(zv);
 
-    // source is already lat/lon -> deg2rad
-    // proj_get_type
-    if (proj_angular_output(srcProj, PJ_FWD) == 1) {
-        x = x > 180 ? 180 : (x < -180 ? -180 : x);
-        y = y > 90 ? 89.9999999 : (y < -90 ? -89.9999999 : y);
-        a = proj_coord (proj_torad(x), proj_torad(y), z, 0);
-    }
-    // transform source-coord to lat/lon
-    else {
-        a = proj_coord (x, y, z, 0);
-        a = proj_trans(srcProj, PJ_INV, a);
-    }
-    //php_printf ("longitude: %g, latitude: %g\n", a.lp.lam, a.lp.phi);
-    
-    // transform to target-projection
-    b = proj_trans(tgtProj, PJ_FWD, a);
-    //php_printf ("easting: %g, northing: %g\n", b.enu.e, b.enu.n);
-    
-    /* im Fehlerfall Nullen liefern wie proj_transform_array_static - coord blieb hier
-       sonst uninitialisiert und landete als Muell-zval im Ergebnis-Array */
-    if (proj_errno(tgtProj) != 0) {
-        b.xyz.x = b.xyz.y = b.xyz.z = 0.0;
-    }
-    // rad2deg
-    else if (proj_angular_output(tgtProj, PJ_FWD) == 1) {
-        b.xyz.x = proj_todeg(b.xyz.x);
-        b.xyz.y = proj_todeg(b.xyz.y);
+    if (Z_TYPE_P(zv) == IS_ARRAY) {
+        zval *x = zend_hash_index_find(Z_ARRVAL_P(zv), 0);
+        zval *y = zend_hash_index_find(Z_ARRVAL_P(zv), 1);
+        zval *z = zend_hash_index_find(Z_ARRVAL_P(zv), 2);
+
+        if (x == NULL || y == NULL) {
+            return 0;
+        }
+        xyz[0] = zval_get_double(x);
+        xyz[1] = zval_get_double(y);
+        if (z != NULL) {
+            xyz[2] = zval_get_double(z);
+        }
+        return 1;
     }
 
-    array_init(&coord);
-    add_assoc_double(&coord, "x", b.xyz.x);
-    add_assoc_double(&coord, "y", b.xyz.y);
-    add_assoc_double(&coord, "z", b.xyz.z);
+    zend_string *str = zval_get_string(zv);
+    const char *p = ZSTR_VAL(str);
+    const char *end;
+    int n = 0;
 
-    return coord;
+    /* numbers separated by any amount of whitespace, so "x  y" does not give y = 0 */
+    while (n < 3) {
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {
+            p++;
+        }
+        double v = zend_strtod(p, &end);
+        if (end == p) {
+            break;
+        }
+        xyz[n++] = v;
+        p = end;
+    }
+
+    zend_string_release(str);
+    return n >= 2;
 }
 
-static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval *xyz_arr)
+/*
+ * Transforms one point and writes array('x' => .., 'y' => .., 'z' => ..) or false into out.
+ * tgt == NULL: src is a transformation (from proj_create_crs_to_crs*), applied forward.
+ * tgt != NULL: legacy proj4 mode, src and tgt are two coordinate systems.
+ */
+static void php_proj_transform(PJ *src, PJ *tgt, const double *xyz, zval *out)
 {
-    zval *x, *y, *t, coord;
-    HashTable *xyz_hash = Z_ARR_P(xyz_arr);
-
-    if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
-        NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
-
-        /* zval_get_double liest nur. convert_to_double_ex schrieb in die Werte des Aufrufers
-           (literale Arrays liegen schreibgeschuetzt im OPcache) und gab bei ZVAL_COPY_VALUE
-           den geteilten String frei -> Double-Free. */
-        double z = (NULL == (t = zend_hash_index_find(xyz_hash, 2))) ? 0.0 : zval_get_double(t);
-
-        coord = proj4_transform_coord_static(srcProj, tgtProj, zval_get_double(x), zval_get_double(y), z);
-        return coord;
-    }
-
-    array_init(&coord);
-    add_assoc_double(&coord, "x", 0);
-    add_assoc_double(&coord, "y", 0);
-    add_assoc_double(&coord, "z", 0);
-    return coord;
-}
-
-static zval proj_transform_array_static(PJ *Proj, zval *xyz_arr)
-{
-    zval *x, *y, *t;
-    zval coord;
-    double cx = 0.0, cy = 0.0, cz = 0.0;
     PJ_COORD c;
-    HashTable *xyz_hash = Z_ARR_P(xyz_arr);
+    double x = xyz[0], y = xyz[1], z = xyz[2];
 
-    if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
-        NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
+    /* PROJ keeps the last error on the object, so clear it before each point */
+    proj_errno_reset(src);
 
-        /* nur lesen - siehe Kommentar in proj4_transform_array_static */
-        double z = (NULL == (t = zend_hash_index_find(xyz_hash, 2))) ? 0.0 : zval_get_double(t);
+    if (tgt == NULL) {
+        c = proj_trans(src, PJ_FWD, proj_coord(x, y, z, 0));
+        if (proj_errno(src) != 0 || c.xyz.x == HUGE_VAL) {
+            ZVAL_FALSE(out);
+            return;
+        }
+    } else {
+        proj_errno_reset(tgt);
 
-        c = proj_coord(zval_get_double(x), zval_get_double(y), z, 0);
-        c = proj_trans(Proj, PJ_FWD, c);
+        if (proj_angular_output(src, PJ_FWD) == 1) {
+            // source is already lat/lon -> deg2rad
+            x = x > 180 ? 180 : (x < -180 ? -180 : x);
+            y = y > 90 ? 89.9999999 : (y < -90 ? -89.9999999 : y);
+            c = proj_coord(proj_torad(x), proj_torad(y), z, 0);
+        } else {
+            // transform source-coord to lat/lon
+            c = proj_trans(src, PJ_INV, proj_coord(x, y, z, 0));
+        }
 
-        cx = c.xyz.x;
-        cy = c.xyz.y;
-        cz = c.xyz.z;
+        c = proj_trans(tgt, PJ_FWD, c);
+
+        if (proj_errno(src) != 0 || proj_errno(tgt) != 0 || c.xyz.x == HUGE_VAL) {
+            ZVAL_FALSE(out);
+            return;
+        }
+
+        if (proj_angular_output(tgt, PJ_FWD) == 1) {
+            c.xyz.x = proj_todeg(c.xyz.x);
+            c.xyz.y = proj_todeg(c.xyz.y);
+        }
     }
 
-    array_init(&coord);
-    add_assoc_double(&coord, "x", cx);
-    add_assoc_double(&coord, "y", cy);
-    add_assoc_double(&coord, "z", cz);
-    return coord;
+    array_init(out);
+    add_assoc_double(out, "x", c.xyz.x);
+    add_assoc_double(out, "y", c.xyz.y);
+    add_assoc_double(out, "z", c.xyz.z);
+}
+
+/* Transforms every point of the array; a point that cannot be read or transformed becomes false. */
+static void php_proj_transform_array(PJ *src, PJ *tgt, HashTable *points, zval *return_value)
+{
+    zval *zv, coord;
+    double xyz[3];
+
+    array_init_size(return_value, zend_hash_num_elements(points));
+
+    ZEND_HASH_FOREACH_VAL(points, zv) {
+        if (php_proj_read_point(zv, xyz)) {
+            php_proj_transform(src, tgt, xyz, &coord);
+        } else {
+            ZVAL_FALSE(&coord);
+        }
+        add_next_index_zval(return_value, &coord);
+    } ZEND_HASH_FOREACH_END();
+}
+
+/* Transforms the comma separated points of a string like "x y, x y z". */
+static void php_proj_transform_string(PJ *src, PJ *tgt, zend_string *str, zval *return_value)
+{
+    zval points;
+    zend_string *delimiter = zend_string_init(",", 1, 0);
+
+    array_init(&points);
+    php_explode(delimiter, str, &points, ZEND_LONG_MAX);
+    php_proj_transform_array(src, tgt, Z_ARRVAL(points), return_value);
+
+    zval_ptr_dtor(&points);
+    zend_string_release(delimiter);
+}
+
+/* PROJ logs the reason only to stderr, which a web request does not show. */
+static void php_proj_warn_create_failed(void)
+{
+    int err = proj_context_errno(PROJ_G(ctx));
+    const char *msg = err ? proj_errno_string(err) : NULL;
+
+    php_error_docref(NULL, E_WARNING, "%s", msg ? msg : "Could not create PROJ object");
+}
+
+/* Swaps P for a copy with GIS axis order (lon/lat, easting/northing) and frees the original. */
+static PJ *php_proj_normalize(PJ *P)
+{
+    PJ *normalized = proj_normalize_for_visualization(PROJ_G(ctx), P);
+
+    if (normalized == NULL) {
+        return P;
+    }
+    proj_destroy(P);
+    return normalized;
 }
 
 /*###########################################################################
@@ -117,7 +180,7 @@ static zval proj_transform_array_static(PJ *Proj, zval *xyz_arr)
  */
 
 /**
- * 
+ *
  * @param string projection-definition
  * @return resource
  */
@@ -127,7 +190,6 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_create)
 {
-    //PJ_CONTEXT *C;
     PJ *P;
     zend_string *definition;
 
@@ -135,11 +197,10 @@ ZEND_FUNCTION(proj_create)
             Z_PARAM_STR(definition)
     ZEND_PARSE_PARAMETERS_END();
 
-    //C = proj_context_create();
-    P = proj_create(PJ_DEFAULT_CTX, ZSTR_VAL(definition));
-    
+    P = proj_create(PROJ_G(ctx), ZSTR_VAL(definition));
+
     if (0==P) {
-        //proj_context_destroy(C);
+        php_proj_warn_create_failed();
         RETURN_FALSE;
     }
 
@@ -162,8 +223,7 @@ ZEND_FUNCTION(proj_create_crs_to_crs)
 {
     PJ *Proj;
     PJ_AREA *Area = NULL;
-    //PJ_CONTEXT *C;
-    
+
     zend_string *srid_from, *srid_to;
     zval *proj_area = NULL;
 
@@ -174,60 +234,50 @@ ZEND_FUNCTION(proj_create_crs_to_crs)
             Z_PARAM_RESOURCE(proj_area)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (proj_area && proj_area != NULL) {
+    if (proj_area != NULL) {
         Area = (PJ_AREA*) zend_fetch_resource_ex(proj_area, PHP_PROJ_AREA_RES_NAME, proj_area_destructor);
         if (!Area ) {
             RETURN_FALSE;
         }
     }
-    
-    //C = proj_context_create();
-    Proj = proj_create_crs_to_crs(PJ_DEFAULT_CTX, ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), Area);
-    
+
+    Proj = proj_create_crs_to_crs(PROJ_G(ctx), ZSTR_VAL(srid_from), ZSTR_VAL(srid_to), Area);
+
     if (0==Proj) {
+        php_proj_warn_create_failed();
         RETURN_FALSE;
     }
 
-    /* For that particular use case, this is not needed.
-       proj_normalize_for_visualization() ensures that the coordinate
-       order expected and returned by proj_trans() will be longitude,
-       latitude for geographic CRS, and easting, northing for projected
-       CRS. If instead of using PROJ strings, "EPSG:XXXX" codes had been used,
-       this might had been necessary. */
-    PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
-    if( NULL != Proj_for_GIS )  {
-        //proj_destroy(Proj);
-        Proj = Proj_for_GIS;
-    }
-    
-    RETURN_RES(zend_register_resource(Proj, proj_destructor));
+    RETURN_RES(zend_register_resource(php_proj_normalize(Proj), proj_destructor));
 }
 
 /**
  * @param resource source_crs
  * @param resource target_crs
  * @param resource area of interest
- * @param string options
+ * @param string option for PROJ, e.g. "ALLOW_BALLPARK=NO"
  * @return resource
  */
 ZEND_BEGIN_ARG_INFO(proj_create_crs_to_crs_from_pj_args, ZEND_SEND_BY_VAL)
     ZEND_ARG_INFO(0, src_crs)
     ZEND_ARG_INFO(0, tgtc_crs)
     ZEND_ARG_INFO(0, proj_area)
+    ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_create_crs_to_crs_from_pj)
 {
     PJ *Proj;
     PJ_AREA *Area = NULL;
-    
-    char *options;
+
+    char *options = NULL;
     size_t options_len;
-    
+    const char *option_list[2] = {NULL, NULL};
+
     zval *proj_area = NULL;
     zval *src_crs, *tgt_crs;
     PJ *srcP, *tgtP;
-    
+
     ZEND_PARSE_PARAMETERS_START(2, 4)
             Z_PARAM_RESOURCE(src_crs)
             Z_PARAM_RESOURCE(tgt_crs)
@@ -235,41 +285,30 @@ ZEND_FUNCTION(proj_create_crs_to_crs_from_pj)
             Z_PARAM_RESOURCE(proj_area)
             Z_PARAM_STRING(options, options_len)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     srcP = (PJ*) zend_fetch_resource_ex(src_crs, PHP_PROJ_RES_NAME, proj_destructor);
     tgtP = (PJ*) zend_fetch_resource_ex(tgt_crs, PHP_PROJ_RES_NAME, proj_destructor);
-    
+
     if (srcP == NULL || tgtP == NULL) {
         RETURN_FALSE;
     }
-    
-    if (proj_area && proj_area != NULL) {
+
+    if (proj_area != NULL) {
         Area = (PJ_AREA*) zend_fetch_resource_ex(proj_area, PHP_PROJ_AREA_RES_NAME, proj_area_destructor);
         if (!Area ) {
             RETURN_FALSE;
         }
     }
-    
-    //C = proj_context_create();
-    Proj = proj_create_crs_to_crs_from_pj(PJ_DEFAULT_CTX, srcP, tgtP, Area, NULL);
-    
+
+    option_list[0] = options;
+    Proj = proj_create_crs_to_crs_from_pj(PROJ_G(ctx), srcP, tgtP, Area, options ? option_list : NULL);
+
     if (0==Proj) {
+        php_proj_warn_create_failed();
         RETURN_FALSE;
     }
 
-    /* For that particular use case, this is not needed.
-       proj_normalize_for_visualization() ensures that the coordinate
-       order expected and returned by proj_trans() will be longitude,
-       latitude for geographic CRS, and easting, northing for projected
-       CRS. If instead of using PROJ strings, "EPSG:XXXX" codes had been used,
-       this might had been necessary. */
-    PJ* Proj_for_GIS = proj_normalize_for_visualization(PJ_DEFAULT_CTX, Proj);
-    if( NULL != Proj_for_GIS )  {
-        //proj_destroy(Proj);
-        Proj = Proj_for_GIS;
-    }
-    
-    RETURN_RES(zend_register_resource(Proj, proj_destructor));
+    RETURN_RES(zend_register_resource(php_proj_normalize(Proj), proj_destructor));
 }
 
 /**
@@ -282,7 +321,7 @@ ZEND_FUNCTION(proj_area_create)
     ZEND_PARSE_PARAMETERS_NONE();
 
     A = proj_area_create();
-    
+
     if (0==A) {
         RETURN_FALSE;
     }
@@ -311,7 +350,6 @@ ZEND_FUNCTION(proj_area_set_bbox)
     PJ_AREA *A;
     double west_lon_degree, south_lat_degree, east_lon_degree, north_lat_degree;
     zval *area;
-    //PJ *P;
 
     ZEND_PARSE_PARAMETERS_START(5, 5)
             Z_PARAM_RESOURCE(area)
@@ -320,13 +358,13 @@ ZEND_FUNCTION(proj_area_set_bbox)
             Z_PARAM_DOUBLE(east_lon_degree)
             Z_PARAM_DOUBLE(north_lat_degree)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     A = (PJ_AREA*) zend_fetch_resource_ex(area, PHP_PROJ_AREA_RES_NAME, proj_area_destructor);
-    
+
     if (0==A) {
         RETURN_FALSE;
     }
-    
+
     proj_area_set_bbox(A, west_lon_degree, south_lat_degree, east_lon_degree, north_lat_degree);
 }
 
@@ -334,6 +372,10 @@ ZEND_FUNCTION(proj_area_set_bbox)
  * @param resource Proj
  * @return void
  */
+ZEND_BEGIN_ARG_INFO(proj_free_args, ZEND_SEND_BY_VAL)
+    ZEND_ARG_INFO(0, Proj)
+ZEND_END_ARG_INFO()
+
 ZEND_FUNCTION(proj_free)
 {
     zval *zpj;
@@ -344,7 +386,7 @@ ZEND_FUNCTION(proj_free)
     ZEND_PARSE_PARAMETERS_END();
 
     P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
-    
+
     if (P != NULL) {
         /* close statt delete: $pj haelt noch eine Referenz, delete gibt die Resource frei -> use-after-free */
         zend_list_close(Z_RES_P(zpj));
@@ -369,17 +411,17 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj4_transform_point)
 {
-    double x, y, z = 0;
-    zval *src, *tgt, coord;
+    double xyz[3] = {0, 0, 0};
+    zval *src, *tgt;
     PJ *srcProj, *tgtProj;
 
     ZEND_PARSE_PARAMETERS_START(4, 5)
             Z_PARAM_RESOURCE(src)
             Z_PARAM_RESOURCE(tgt)
-            Z_PARAM_DOUBLE(x)
-            Z_PARAM_DOUBLE(y)
+            Z_PARAM_DOUBLE(xyz[0])
+            Z_PARAM_DOUBLE(xyz[1])
             Z_PARAM_OPTIONAL
-            Z_PARAM_DOUBLE(z)
+            Z_PARAM_DOUBLE(xyz[2])
     ZEND_PARSE_PARAMETERS_END();
 
     srcProj = (PJ*) zend_fetch_resource_ex(src, PHP_PROJ_RES_NAME, proj_destructor);
@@ -389,9 +431,7 @@ ZEND_FUNCTION(proj4_transform_point)
         RETURN_FALSE;
     }
 
-    coord = proj4_transform_coord_static(srcProj, tgtProj, x, y, z);
-    RETVAL_ARR(Z_ARR(coord));
-    //return_value = proj4_transform_coord_static(srcProj, tgtProj, x, y, z);
+    php_proj_transform(srcProj, tgtProj, xyz, return_value);
 }
 
 /**
@@ -410,17 +450,16 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_transform_point)
 {
-    double x, y, z, t = 0;
+    double xyz[3] = {0, 0, 0};
     zval *Proj;
     PJ *P;
-    PJ_COORD c;
 
     ZEND_PARSE_PARAMETERS_START(3, 4)
             Z_PARAM_RESOURCE(Proj)
-            Z_PARAM_DOUBLE(x)
-            Z_PARAM_DOUBLE(y)
+            Z_PARAM_DOUBLE(xyz[0])
+            Z_PARAM_DOUBLE(xyz[1])
             Z_PARAM_OPTIONAL
-            Z_PARAM_DOUBLE(z)
+            Z_PARAM_DOUBLE(xyz[2])
     ZEND_PARSE_PARAMETERS_END();
 
     P = (PJ*) zend_fetch_resource_ex(Proj, PHP_PROJ_RES_NAME, proj_destructor);
@@ -429,22 +468,14 @@ ZEND_FUNCTION(proj_transform_point)
         RETURN_FALSE;
     }
 
-    c = proj_coord (x, y, z, t);
-    c = proj_trans(P, PJ_FWD, c);
-    
-    array_init(return_value);
-    add_assoc_double(return_value, "x", c.xyz.x);
-    add_assoc_double(return_value, "y", c.xyz.y);
-    add_assoc_double(return_value, "z", c.xyz.z);
-    //*return_value = proj4_transform_coord_static(P, x, y, z);
+    php_proj_transform(P, NULL, xyz, return_value);
 }
 
 /**
- * 
- * @param resource srcDefn
- * @param resource tgtDefn
+ *
+ * @param resource Proj
  * @param array points-array
- * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
+ * @return mixed array with array ('x' => x, 'y' => y 'z' => z) or false per point; false on error
  */
 ZEND_BEGIN_ARG_INFO(proj_transform_array_args, ZEND_SEND_BY_VAL)
     ZEND_ARG_INFO(0, Proj)
@@ -453,14 +484,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_transform_array)
 {
-    /* method-params */
-    zval xyz_arr, *zv, coord;
-    zend_string *delimiter, *trimmed_point_string;
-
-    /* user-params */
     zval *src, *xyz_arr_p;
-
-    /* projection-params */
     PJ *P;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
@@ -474,44 +498,15 @@ ZEND_FUNCTION(proj_transform_array)
         RETURN_FALSE;
     }
 
-    array_init(return_value);
-    delimiter = zend_string_init(" ", 1, 0);
-
-    ZEND_HASH_FOREACH_VAL(Z_ARR_P(xyz_arr_p), zv) {
-        
-        // split into x,y,z-array
-        if (Z_TYPE_P(zv) != IS_ARRAY) {
-            /* eigene Kopie statt convert_to_string_ex: zv gehoert dem Aufrufer und kann in
-               schreibgeschuetztem OPcache-Speicher liegen (literales Array) */
-            zend_string *point_string = zval_try_get_string(zv);
-            if (UNEXPECTED(!point_string)) {
-                break;
-            }
-            array_init(&xyz_arr);
-            trimmed_point_string = php_trim(point_string, NULL, 0, 3);
-            php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
-            coord = proj_transform_array_static(P, &xyz_arr);
-            zend_string_release(trimmed_point_string);
-            zend_string_release(point_string);
-            zval_ptr_dtor(&xyz_arr);
-        } else {
-            coord = proj_transform_array_static(P, zv);
-        }
-        
-        add_next_index_zval(return_value, &coord);
-    }
-    ZEND_HASH_FOREACH_END();
-
-    // cleanup
-    zend_string_release(delimiter);
+    php_proj_transform_array(P, NULL, Z_ARRVAL_P(xyz_arr_p), return_value);
 }
 
 /**
- * 
+ *
  * @param resource srcDefn
  * @param resource tgtDefn
  * @param array points-array
- * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
+ * @return mixed array with array ('x' => x, 'y' => y 'z' => z) or false per point; false on error
  */
 ZEND_BEGIN_ARG_INFO(proj4_transform_array_args, ZEND_SEND_BY_VAL)
     ZEND_ARG_INFO(0, srcProj)
@@ -521,14 +516,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj4_transform_array)
 {
-    /* method-params */
-    zval xyz_arr, *zv, coord;
-    zend_string *delimiter, *trimmed_point_string;
-
-    /* user-params */
     zval *srcDefn, *tgtDefn, *xyz_arr_p;
-
-    /* projection-params */
     PJ *srcProj, *tgtProj;
 
     ZEND_PARSE_PARAMETERS_START(3, 3)
@@ -544,45 +532,14 @@ ZEND_FUNCTION(proj4_transform_array)
         RETURN_FALSE;
     }
 
-    array_init(return_value);
-    delimiter = zend_string_init(" ", 1, 0);
-    HashTable *pts_hash = Z_ARR_P(xyz_arr_p);
-
-    ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-
-        // split into into x,y,z-Array
-        if (Z_TYPE_P(zv) != IS_ARRAY) {
-            /* eigene Kopie statt convert_to_string_ex: zv gehoert dem Aufrufer und kann in
-               schreibgeschuetztem OPcache-Speicher liegen (literales Array) */
-            zend_string *point_string = zval_try_get_string(zv);
-            if (UNEXPECTED(!point_string)) {
-                break;
-            }
-            array_init(&xyz_arr);
-            trimmed_point_string = php_trim(point_string, NULL, 0, 3);
-            php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
-            coord = proj4_transform_array_static(srcProj, tgtProj, &xyz_arr);
-            zend_string_release(trimmed_point_string);
-            zend_string_release(point_string);
-            zval_ptr_dtor(&xyz_arr);
-        } else {
-            coord = proj4_transform_array_static(srcProj, tgtProj, zv);
-        }
-
-        add_next_index_zval(return_value, &coord);
-        
-    }
-    ZEND_HASH_FOREACH_END();
-
-    // cleanup
-    zend_string_release(delimiter);
+    php_proj_transform_array(srcProj, tgtProj, Z_ARRVAL_P(xyz_arr_p), return_value);
 }
 
 /**
  * @param resource srcDefn
  * @param resource tgtDefn
  * @param string geometry
- * @return mixed array ('x' => x, 'y' => y 'z' => z) or false on error
+ * @return mixed array with array ('x' => x, 'y' => y 'z' => z) or false per point; false on error
  */
 ZEND_BEGIN_ARG_INFO(proj4_transform_string_args, ZEND_SEND_BY_VAL)
     ZEND_ARG_INFO(0, srcProj)
@@ -592,19 +549,9 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj4_transform_string)
 {
-    /* user-params */
     zval *srcDefn, *tgtDefn;
     zend_string *str;
-    
-    /* projection-params */
     PJ *srcProj, *tgtProj;
-
-    /* coord-params */
-    zval pts_arr, xyz_arr;
-    zend_string *delimiter, *delimiter2, *trimmed_geom_string, *trimmed_point_string;
-    HashTable *pts_hash;
-    zval coord;
-    zval *zv;
 
     ZEND_PARSE_PARAMETERS_START(3, 3)
             Z_PARAM_RESOURCE(srcDefn)
@@ -619,50 +566,13 @@ ZEND_FUNCTION(proj4_transform_string)
         RETURN_FALSE;
     }
 
-    array_init(return_value);
-
-    delimiter = zend_string_init(",", 1, 0);
-    delimiter2 = zend_string_init(" ", 1, 0);
-
-    // in einzelne Koordinaten zerteilen
-    array_init(&pts_arr);
-    trimmed_geom_string = php_trim(str, NULL, 0, 3);
-    php_explode(delimiter, trimmed_geom_string, &pts_arr, LONG_MAX);
-
-    if (Z_TYPE(pts_arr) == IS_ARRAY) {
-        pts_hash = Z_ARR(pts_arr);
-
-        ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-            // needed to make sure we have a string. Throws an error if not.
-            convert_to_string_ex(zv);
-
-            // split into in x,y,z
-            array_init(&xyz_arr);
-            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
-
-            php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
-
-            coord = proj4_transform_array_static(srcProj, tgtProj, &xyz_arr);
-            add_next_index_zval(return_value, &coord);
-
-            // cleanup
-            zend_string_release(trimmed_point_string);
-            zval_ptr_dtor(&xyz_arr);
-        }
-        ZEND_HASH_FOREACH_END();
-    }
-
-    // cleanup
-    zval_ptr_dtor(&pts_arr);
-    zend_string_release(delimiter);
-    zend_string_release(delimiter2);
-    zend_string_release(trimmed_geom_string);
+    php_proj_transform_string(srcProj, tgtProj, str, return_value);
 }
 
 /**
  * @param resource Proj
  * @param string geometry
- * @return mixed array ('x' => x, 'y' => y 'z' => z) or FALSE on error
+ * @return mixed array with array ('x' => x, 'y' => y 'z' => z) or false per point; false on error
  */
 ZEND_BEGIN_ARG_INFO(proj_transform_string_args, ZEND_SEND_BY_VAL)
     ZEND_ARG_INFO(0, Proj)
@@ -671,19 +581,9 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_transform_string)
 {
-    /* user-params */
     zval *Proj;
     zend_string *str;
-
-    /* projection-params */
     PJ *P;
-
-    /* coord-params */
-    zval pts_arr, xyz_arr;
-    zend_string *delimiter, *delimiter2, *trimmed_geom_string, *trimmed_point_string;
-    HashTable *pts_hash;
-    zval coord;
-    zval *zv;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
             Z_PARAM_RESOURCE(Proj)
@@ -696,43 +596,7 @@ ZEND_FUNCTION(proj_transform_string)
         RETURN_FALSE;
     }
 
-    array_init(return_value);
-
-    delimiter = zend_string_init(",", 1, 0);
-    delimiter2 = zend_string_init(" ", 1, 0);
-
-    // in einzelne Koordinaten zerteilen
-    array_init(&pts_arr);
-    trimmed_geom_string = php_trim(str, NULL, 0, 3);
-    php_explode(delimiter, trimmed_geom_string, &pts_arr, LONG_MAX);
-
-    if (Z_TYPE(pts_arr) == IS_ARRAY) {
-        pts_hash = Z_ARR(pts_arr);
-
-        ZEND_HASH_FOREACH_VAL(pts_hash, zv) {
-            convert_to_string_ex(zv);
-            
-            // split into in x,y,z
-            array_init(&xyz_arr);
-            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
-
-            php_explode(delimiter2, trimmed_point_string, &xyz_arr, LONG_MAX);
-
-            coord = proj_transform_array_static(P, &xyz_arr);
-            add_next_index_zval(return_value, &coord);
-
-            // cleanup
-            zend_string_release(trimmed_point_string);
-            zval_ptr_dtor(&xyz_arr);
-        }
-        ZEND_HASH_FOREACH_END();
-    }
-
-    // cleanup
-    zval_ptr_dtor(&pts_arr);
-    zend_string_release(delimiter);
-    zend_string_release(delimiter2);
-    zend_string_release(trimmed_geom_string);
+    php_proj_transform_string(P, NULL, str, return_value);
 }
 
 /**
@@ -755,7 +619,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_distance_lp)
 {
-    double lon1, lat1, lon2, lat2 = 0;
+    double lon1, lat1, lon2, lat2;
     zval *src;
     PJ *P;
 
@@ -803,7 +667,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_distance_lpz)
 {
-    double lon1, lat1, z1, lon2, lat2, z2, t = 0;
+    double lon1, lat1, z1, lon2, lat2, z2;
     zval *src;
     PJ *P;
 
@@ -823,8 +687,8 @@ ZEND_FUNCTION(proj_distance_lpz)
         RETURN_FALSE;
     }
 
-    PJ_COORD c1 = proj_coord(lon1, lat1, z1, t);
-    PJ_COORD c2 = proj_coord(lon2, lat2, z2, t);
+    PJ_COORD c1 = proj_coord(lon1, lat1, z1, 0);
+    PJ_COORD c2 = proj_coord(lon2, lat2, z2, 0);
 
     RETURN_DOUBLE( proj_lpz_dist(P, c1, c2) );
 }
@@ -847,7 +711,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_distance_xy)
 {
-    double x1, y1, x2, y2 = 0;
+    double x1, y1, x2, y2;
 
     ZEND_PARSE_PARAMETERS_START(4, 4)
         Z_PARAM_DOUBLE(x1)
@@ -884,7 +748,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(proj_distance_xyz)
 {
-    double x1, y1, z1, x2, y2, z2 = 0;
+    double x1, y1, z1, x2, y2, z2;
 
     ZEND_PARSE_PARAMETERS_START(6, 6)
         Z_PARAM_DOUBLE(x1)
@@ -923,18 +787,18 @@ ZEND_FUNCTION(proj_is_latlong)
     ZEND_PARSE_PARAMETERS_START(1, 1)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
 
-    if (proj_angular_output(pj, PJ_FWD) == 1) {
-        RETURN_TRUE;
-    } else {
+    if (pj == NULL) {
         RETURN_FALSE;
     }
+
+    RETURN_BOOL(proj_angular_output(pj, PJ_FWD) == 1);
 }
 
 /**
- * 
+ *
  * @param resource projection
  * @return boolean
  */
@@ -945,7 +809,10 @@ ZEND_END_ARG_INFO()
 ZEND_FUNCTION(proj_is_geocent)
 {
     zval *zpj;
-    PJ *pj;
+    PJ *pj, *target;
+    PJ_PROJ_INFO info;
+    PJ_LOG_LEVEL log_level;
+    int geocent;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
             Z_PARAM_RESOURCE(zpj)
@@ -953,15 +820,35 @@ ZEND_FUNCTION(proj_is_geocent)
 
     pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
 
-    if (proj_angular_output(pj, PJ_FWD) == 0) {
-        RETURN_TRUE;
-    } else {
+    if (pj == NULL) {
         RETURN_FALSE;
     }
+
+    // proj-string "+proj=geocent ..."
+    info = proj_pj_info(pj);
+    if (info.id != NULL && strcmp(info.id, "geocent") == 0) {
+        RETURN_TRUE;
+    }
+
+    if (proj_get_type(pj) == PJ_TYPE_GEOCENTRIC_CRS) {
+        RETURN_TRUE;
+    }
+
+    // transformation: look at its target CRS; objects without one would log an error to stderr
+    log_level = proj_log_level(PROJ_G(ctx), PJ_LOG_NONE);
+    target = proj_get_target_crs(PROJ_G(ctx), pj);
+    proj_log_level(PROJ_G(ctx), log_level);
+
+    geocent = target != NULL && proj_get_type(target) == PJ_TYPE_GEOCENTRIC_CRS;
+    if (target != NULL) {
+        proj_destroy(target);
+    }
+
+    RETURN_BOOL(geocent);
 }
 
 /**
- * 
+ *
  * @param resource projection
  * @param long
  * @return mixed string or false on error
@@ -982,17 +869,16 @@ ZEND_FUNCTION(proj_get_def)
 
     pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
 
-    if (pj != NULL && pj) {
-        result = proj_pj_info(pj);
-
-        RETURN_STRING(result.definition);
+    if (pj == NULL) {
+        RETURN_FALSE;
     }
 
-    RETURN_FALSE;
+    result = proj_pj_info(pj);
+    RETURN_STRING(result.definition ? result.definition : "");
 }
 
 /**
- * 
+ *
  * @param resource projection
  * @param long
  * @return mixed array or false on error
@@ -1016,13 +902,13 @@ ZEND_FUNCTION(proj_get_pj_info)
     if (pj == NULL) {
         RETURN_FALSE;
     }
-    
+
     array_init(return_value);
     result = proj_pj_info(pj);
 
     add_assoc_string(return_value, "id", result.id ? result.id : "");
-    add_assoc_string(return_value, "definition", result.definition);
-    add_assoc_string(return_value, "description", result.description);
+    add_assoc_string(return_value, "definition", result.definition ? result.definition : "");
+    add_assoc_string(return_value, "description", result.description ? result.description : "");
     add_assoc_double(return_value, "accuracy", result.accuracy);
     add_assoc_long(return_value, "has_inverse", result.has_inverse);
 }
@@ -1033,7 +919,7 @@ ZEND_FUNCTION(proj_get_pj_info)
  */
 
 /**
- * 
+ *
  * @return numeric
  */
 ZEND_BEGIN_ARG_INFO(proj_get_errno_args, ZEND_SEND_BY_VAL)
@@ -1044,24 +930,22 @@ ZEND_FUNCTION(proj_get_errno)
 {
     zval *zpj;
     PJ *pj;
-    zend_long error_code;
-    
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
             Z_PARAM_RESOURCE(zpj)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     pj = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
-    
-    if (pj != NULL && pj) {
-        error_code = proj_errno(pj);
-        RETURN_LONG(error_code);
+
+    if (pj == NULL) {
+        RETURN_NULL();
     }
-    
-    RETURN_NULL();
+
+    RETURN_LONG(proj_errno(pj));
 }
 
 /**
- * 
+ *
  * @param integer error-code
  * @return string error-message
  */
@@ -1072,20 +956,22 @@ ZEND_END_ARG_INFO()
 ZEND_FUNCTION(proj_get_errno_string)
 {
     zend_long errorCode;
+    const char *msg;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
             Z_PARAM_LONG(errorCode)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     if( errorCode == 0 ) {
         RETURN_EMPTY_STRING();
     }
 
-    RETURN_STRING( proj_errno_string((int)errorCode) );
+    msg = proj_errno_string((int)errorCode);
+    RETURN_STRING(msg ? msg : "");
 }
 
 /**
- * 
+ *
  * @return string
  */
 ZEND_FUNCTION(proj_get_release)
@@ -1094,71 +980,56 @@ ZEND_FUNCTION(proj_get_release)
 }
 
 /**
- * 
+ *
  * @return array
  */
 ZEND_FUNCTION(proj_get_info)
 {
-    zval info_arr;
-    array_init(&info_arr);
-    
-    add_assoc_string(&info_arr, "version", strdup(proj_info().version));
-    add_assoc_long(&info_arr, "major", proj_info().major);
-    add_assoc_long(&info_arr, "minor", proj_info().minor);
-    add_assoc_long(&info_arr, "patch", proj_info().patch);
-    //add_assoc_string(&info_arr, "paths", strdup(proj_info().paths));
-    add_assoc_string(&info_arr, "release", strdup(proj_info().release));
-    add_assoc_string(&info_arr, "searchpath", strdup(proj_info().searchpath));
-    
-    RETURN_ARR( Z_ARR(info_arr) );
+    PJ_INFO info = proj_info();
+
+    array_init(return_value);
+    add_assoc_string(return_value, "version", (char *) info.version);
+    add_assoc_long(return_value, "major", info.major);
+    add_assoc_long(return_value, "minor", info.minor);
+    add_assoc_long(return_value, "patch", info.patch);
+    add_assoc_string(return_value, "release", (char *) info.release);
+    add_assoc_string(return_value, "searchpath", (char *) info.searchpath);
 }
 
 /**
- * @hint deprecated since PROJ 7.1
+ * @hint PROJ 7.1 replaced the unit list by the database, so the fields differ by PROJ version
  * @see https://proj.org/development/reference/datatypes.html#c.PJ_UNITS
  * @return array
  */
 ZEND_FUNCTION(proj_list_units)
 {
     zval tmp;
-    
+
     array_init(return_value);
-    
-#if PROJ_VERSION_MAJOR < 7 && PROJ_VERSION_MINOR < 2
+
+#if PROJ_VERSION_MAJOR < 7
     const PJ_UNITS *unit;
-    
+
     for (unit=proj_list_units(); unit->id ; ++unit) {
-        //php_printf("%9s %-16s %-16s %f\n",unit->id, unit->to_meter, unit->name, unit->factor);
-        
         array_init(&tmp);
-        add_assoc_string(&tmp, "name", unit->name);
-        add_assoc_string(&tmp, "to_meter", unit->to_meter);
+        add_assoc_string(&tmp, "name", (char *) unit->name);
+        add_assoc_string(&tmp, "to_meter", (char *) unit->to_meter);
         add_assoc_double(&tmp, "factor", unit->factor);
-        
-        zval dup;
-        ZVAL_COPY(&dup, &tmp);
-        add_assoc_zval(return_value, unit->id, &dup);
-        zval_ptr_dtor_nogc(&tmp);
+        add_assoc_zval(return_value, unit->id, &tmp);
     }
 #else
     int result_count = 0;
     PROJ_UNIT_INFO** units;
-    /* PROJ schreibt die Anzahl durch den Zeiger - vorher war hier ein uninitialisierter Zeiger */
-    units = proj_get_units_from_database(NULL,NULL,"linear",0,&result_count);
-    
+    /* PROJ schreibt die Anzahl durch den Zeiger */
+    units = proj_get_units_from_database(PROJ_G(ctx), NULL, "linear", 0, &result_count);
+
     for (int i = 0; units && units[i]; i++) {
-        //php_printf("%9s %-16s %-16s %-16s %f\n",units[i]->code, units[i]->auth_name, units[i]->category, units[i]->name, units[i]->conv_factor);
         array_init(&tmp);
-        
         add_assoc_string(&tmp, "name", units[i]->name);
         add_assoc_string(&tmp, "auth_name", units[i]->auth_name);
         add_assoc_string(&tmp, "category", units[i]->category);
         add_assoc_double(&tmp, "conv_factor", units[i]->conv_factor);
-        
-        zval dup;
-        ZVAL_COPY(&dup, &tmp);
-        add_assoc_zval(return_value, units[i]->code, &dup);
-        zval_ptr_dtor_nogc(&tmp);
+        add_assoc_zval(return_value, units[i]->code, &tmp);
     }
     proj_unit_list_destroy(units);
 #endif
@@ -1175,24 +1046,18 @@ ZEND_FUNCTION(proj_list_ellps)
     zval tmp;
 
     array_init(return_value);
-    
+
     for (ellps=proj_list_ellps(); ellps->id ; ++ellps) {
-        //php_printf("%9s %-16s %-16s %s\n",ellps->id, ellps->major, ellps->ell, ellps->name);
-        
         array_init(&tmp);
-        add_assoc_string(&tmp, "name", ellps->name);
-        add_assoc_string(&tmp, "major", ellps->major);
-        add_assoc_string(&tmp, "ell", ellps->ell);
-        
-        zval dup;
-        ZVAL_COPY(&dup, &tmp);
-        add_assoc_zval(return_value, ellps->id, &dup);
-        zval_ptr_dtor_nogc(&tmp);
+        add_assoc_string(&tmp, "name", (char *) ellps->name);
+        add_assoc_string(&tmp, "major", (char *) ellps->major);
+        add_assoc_string(&tmp, "ell", (char *) ellps->ell);
+        add_assoc_zval(return_value, ellps->id, &tmp);
     }
 }
 
 /**
- * Set PROJ resource search paths.
+ * Set PROJ resource search paths for the current request.
  * seit PROJ 6.0
  *
  * PHP:
@@ -1224,7 +1089,8 @@ ZEND_FUNCTION(proj_context_set_search_paths)
      * explizite Suchpfade wieder zurücksetzen.
      */
     if (count == 0) {
-        proj_context_set_search_paths(PJ_DEFAULT_CTX, 0, NULL);
+        proj_context_set_search_paths(PROJ_G(ctx), 0, NULL);
+        PROJ_G(paths_changed) = 0;
         RETURN_TRUE;
     }
 
@@ -1248,15 +1114,13 @@ ZEND_FUNCTION(proj_context_set_search_paths)
 
     } ZEND_HASH_FOREACH_END();
 
-    /*
-     * PJ_DEFAULT_CTX entspricht dem von der Erweiterung
-     * ohnehin verwendeten PROJ Default Context.
-     */
     proj_context_set_search_paths(
-        PJ_DEFAULT_CTX,
+        PROJ_G(ctx),
         count,
         paths
     );
+    /* der Kontext lebt laenger als der Request: RSHUTDOWN setzt die Pfade zurueck */
+    PROJ_G(paths_changed) = 1;
 
     efree(paths);
 
@@ -1289,7 +1153,7 @@ static const zend_function_entry proj_functions[] = {
     ZEND_FE(proj_get_errno_string, proj_get_errno_string_args)
     ZEND_FE(proj_get_release, Proj_method_no_args)
     ZEND_FE(proj_get_info, Proj_method_no_args)
-	ZEND_FE(proj_context_set_search_paths, proj_context_set_search_paths_args)
+    ZEND_FE(proj_context_set_search_paths, proj_context_set_search_paths_args)
     ZEND_FE(proj_list_units, Proj_method_no_args)
     ZEND_FE(proj_list_ellps, Proj_method_no_args)
     ZEND_FE(proj_area_create, Proj_method_no_args)
@@ -1298,49 +1162,76 @@ static const zend_function_entry proj_functions[] = {
     ZEND_FE(proj_distance_lpz, proj_distance_lpz_args)
     ZEND_FE(proj_distance_xy, proj_distance_xy_args)
     ZEND_FE(proj_distance_xyz, proj_distance_xyz_args)
-    ZEND_FE(proj_free, Proj_method_no_args) {
-        NULL, NULL, NULL
-    }
+    ZEND_FE(proj_free, proj_free_args)
+    ZEND_FE_END
 };
+
+static PHP_GINIT_FUNCTION(proj)
+{
+#if defined(COMPILE_DL_PROJ) && defined(ZTS)
+    ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+#ifdef ZTS
+    /* ein PROJ-Kontext darf nicht von zwei Threads gleichzeitig benutzt werden.
+       shortcut: proj_get_info()['searchpath'] zeigt unter ZTS den Default-Kontext, nicht diesen */
+    proj_globals->ctx = proj_context_create();
+#else
+    proj_globals->ctx = PJ_DEFAULT_CTX;
+#endif
+    proj_globals->paths_changed = 0;
+}
+
+static PHP_GSHUTDOWN_FUNCTION(proj)
+{
+#ifdef ZTS
+    if (proj_globals->ctx != NULL) {
+        proj_context_destroy(proj_globals->ctx);
+    }
+#endif
+}
 
 zend_module_entry proj_module_entry = {
     STANDARD_MODULE_HEADER,
     PHP_PROJ_EXTNAME,
     proj_functions,
     PHP_MINIT(proj),           /* module init function */
-    PHP_MSHUTDOWN(proj),       /* module shutdown function */
-    PHP_RINIT(proj),           /* request init function */
-    NULL,                       /* request shutdown function, would be PHP_RSHUTDOWN(proj) */
+    NULL,                      /* module shutdown function */
+    NULL,                      /* request init function */
+    PHP_RSHUTDOWN(proj),       /* request shutdown function */
     PHP_MINFO(proj),           /* module info function */
     PHP_PROJ_VERSION,
-    //PHP_MODULE_GLOBALS(geos),     /* globals descriptor */
-    //PHP_GINIT(geos),              /* globals ctor */
-    //NULL,                         /* globals dtor */
-    //NULL,                         /* post deactivate */
-    STANDARD_MODULE_PROPERTIES /* or STANDARD_MODULE_PROPERTIES_EX if above used */
+    PHP_MODULE_GLOBALS(proj),
+    PHP_GINIT(proj),
+    PHP_GSHUTDOWN(proj),
+    NULL,                      /* post deactivate */
+    STANDARD_MODULE_PROPERTIES_EX
 };
 
 static void php_proj_dtor(zend_resource *resource) {
     PJ *proj = (PJ*) resource->ptr;
-    if (proj != NULL && proj) {
+    if (proj != NULL) {
         proj_destroy(proj);
     }
 }
 
 static void php_proj_area_dtor(zend_resource *resource) {
     PJ_AREA *area = (PJ_AREA*) resource->ptr;
-    if (area != NULL && area) {
+    if (area != NULL) {
         proj_area_destroy(area);
     }
-}
-
-PHP_RINIT_FUNCTION(proj) {
-    return SUCCESS;
 }
 
 PHP_MINIT_FUNCTION(proj) {
     proj_destructor = zend_register_list_destructors_ex(php_proj_dtor, NULL, PHP_PROJ_RES_NAME, module_number);
     proj_area_destructor = zend_register_list_destructors_ex(php_proj_area_dtor, NULL, PHP_PROJ_AREA_RES_NAME, module_number);
+    return SUCCESS;
+}
+
+PHP_RSHUTDOWN_FUNCTION(proj) {
+    if (PROJ_G(paths_changed)) {
+        proj_context_set_search_paths(PROJ_G(ctx), 0, NULL);
+        PROJ_G(paths_changed) = 0;
+    }
     return SUCCESS;
 }
 
@@ -1354,11 +1245,6 @@ PHP_MINFO_FUNCTION(proj) {
     php_info_print_table_row(2, "PROJ Version", proj_info().version);
     php_info_print_table_row(2, "PROJ Searchpath", proj_info().searchpath);
     php_info_print_table_end();
-}
-
-PHP_MSHUTDOWN_FUNCTION(proj) {
-    UNREGISTER_INI_ENTRIES();
-    return SUCCESS;
 }
 
 #ifdef COMPILE_DL_PROJ

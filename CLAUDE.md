@@ -21,7 +21,7 @@ php -d extension=modules/proj.so phpng-proj.php
 make clean && phpize --clean                # clean up
 ```
 
-CI: `.travis.yml` (PHP 7.0–8.0, Ubuntu jammy).
+CI: `.github/workflows/ci.yml` (PHP 8.1–8.4, Ubuntu with the distro's libproj-dev).
 
 ## Adding a PHP function
 
@@ -34,7 +34,9 @@ Touch all four places, or the function won't exist:
 ## Conventions & gotchas
 
 - PJ objects are PHP resources (`Proj`, `Area`), freed by `php_proj_dtor` / `php_proj_area_dtor`. Never `proj_destroy` a PJ that is still owned by a resource.
-- `proj4_*` functions are the legacy API (take two proj strings); `proj_*` take a `Proj` resource from `proj_create_crs_to_crs*`. Keep both working.
+- `proj4_*` functions are the legacy API (take two `Proj` resources from `proj_create()`, one per coordinate system); `proj_*` take one `Proj` resource from `proj_create_crs_to_crs*`. Both share `php_proj_transform*()`; keep both working.
+- Never write into zvals that come from PHP userland (arrays may be shared or live in read-only OPcache memory): read with `zval_get_double()` / `zval_get_string()`.
+- Use `PROJ_G(ctx)`, never `PJ_DEFAULT_CTX`: under ZTS each thread has its own PROJ context.
 - Must compile against PHP 7.0 through 8.x and PROJ 6 through current; guard version-specific code with `PHP_VERSION_ID` / `PROJ_VERSION_MAJOR`.
 - `.phpt` expectations include exact PHP error/deprecation messages, which differ between PHP versions; use `--EXPECTF--` with `%d`/`%f`/`%s` where values vary.
 - Version number lives in `PHP_PROJ_VERSION` (`src/php_proj.h`) and `package.xml`; bump both on release.
