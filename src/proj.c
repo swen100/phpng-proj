@@ -39,41 +39,39 @@ static zval proj4_transform_coord_static(PJ *srcProj, PJ *tgtProj, double x, dou
     b = proj_trans(tgtProj, PJ_FWD, a);
     //php_printf ("easting: %g, northing: %g\n", b.enu.e, b.enu.n);
     
-    if (proj_errno(tgtProj) == 0) {
-        // rad2deg
-        if (proj_angular_output(tgtProj, PJ_FWD) == 1) {
-            b.xyz.x = proj_todeg(b.xyz.x);
-            b.xyz.y = proj_todeg(b.xyz.y);
-        }
-
-        array_init(&coord);
-        add_assoc_double(&coord, "x", b.xyz.x);
-        add_assoc_double(&coord, "y", b.xyz.y);
-        add_assoc_double(&coord, "z", b.xyz.z);
+    /* im Fehlerfall Nullen liefern wie proj_transform_array_static - coord blieb hier
+       sonst uninitialisiert und landete als Muell-zval im Ergebnis-Array */
+    if (proj_errno(tgtProj) != 0) {
+        b.xyz.x = b.xyz.y = b.xyz.z = 0.0;
     }
+    // rad2deg
+    else if (proj_angular_output(tgtProj, PJ_FWD) == 1) {
+        b.xyz.x = proj_todeg(b.xyz.x);
+        b.xyz.y = proj_todeg(b.xyz.y);
+    }
+
+    array_init(&coord);
+    add_assoc_double(&coord, "x", b.xyz.x);
+    add_assoc_double(&coord, "y", b.xyz.y);
+    add_assoc_double(&coord, "z", b.xyz.z);
 
     return coord;
 }
 
 static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval *xyz_arr)
 {
-    zval *x, *y, z, *t, coord;
+    zval *x, *y, *t, coord;
     HashTable *xyz_hash = Z_ARR_P(xyz_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
 
-        if (NULL == (t = zend_hash_index_find(xyz_hash, 2))) {
-            ZVAL_DOUBLE(&z, 0.0);
-        } else {
-            ZVAL_COPY_VALUE(&z, t);
-            convert_to_double_ex(&z);
-        }
+        /* zval_get_double liest nur. convert_to_double_ex schrieb in die Werte des Aufrufers
+           (literale Arrays liegen schreibgeschuetzt im OPcache) und gab bei ZVAL_COPY_VALUE
+           den geteilten String frei -> Double-Free. */
+        double z = (NULL == (t = zend_hash_index_find(xyz_hash, 2))) ? 0.0 : zval_get_double(t);
 
-        convert_to_double_ex(x);
-        convert_to_double_ex(y);
-
-        coord = proj4_transform_coord_static(srcProj, tgtProj, Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z));
+        coord = proj4_transform_coord_static(srcProj, tgtProj, zval_get_double(x), zval_get_double(y), z);
         return coord;
     }
 
@@ -86,25 +84,19 @@ static zval proj4_transform_array_static(PJ *srcProj, PJ *tgtProj, zval *xyz_arr
 
 static zval proj_transform_array_static(PJ *Proj, zval *xyz_arr)
 {
-    zval *x, *y, z, *t, coord;
+    zval *x, *y, *t;
+    zval coord;
     double cx = 0.0, cy = 0.0, cz = 0.0;
     PJ_COORD c;
     HashTable *xyz_hash = Z_ARR_P(xyz_arr);
 
     if (NULL != (x = zend_hash_index_find(xyz_hash, 0)) &&
         NULL != (y = zend_hash_index_find(xyz_hash, 1))) {
-        
-        if (NULL == (t = zend_hash_index_find(xyz_hash, 2))) {
-            ZVAL_DOUBLE(&z, 0.0);
-        } else {
-            ZVAL_COPY_VALUE(&z, t);
-            convert_to_double_ex(&z);
-        }
 
-        convert_to_double_ex(x);
-        convert_to_double_ex(y);
+        /* nur lesen - siehe Kommentar in proj4_transform_array_static */
+        double z = (NULL == (t = zend_hash_index_find(xyz_hash, 2))) ? 0.0 : zval_get_double(t);
 
-        c = proj_coord(Z_DVAL_P(x), Z_DVAL_P(y), Z_DVAL(z), 0);
+        c = proj_coord(zval_get_double(x), zval_get_double(y), z, 0);
         c = proj_trans(Proj, PJ_FWD, c);
 
         cx = c.xyz.x;
@@ -354,7 +346,8 @@ ZEND_FUNCTION(proj_free)
     P = (PJ*) zend_fetch_resource_ex(zpj, PHP_PROJ_RES_NAME, proj_destructor);
     
     if (P != NULL) {
-        zend_list_delete(Z_RES_P(zpj));
+        /* close statt delete: $pj haelt noch eine Referenz, delete gibt die Resource frei -> use-after-free */
+        zend_list_close(Z_RES_P(zpj));
     }
 }
 
@@ -488,13 +481,18 @@ ZEND_FUNCTION(proj_transform_array)
         
         // split into x,y,z-array
         if (Z_TYPE_P(zv) != IS_ARRAY) {
-            // needed to make sure we have a string. Throws an error if not.
-            convert_to_string_ex(zv);
+            /* eigene Kopie statt convert_to_string_ex: zv gehoert dem Aufrufer und kann in
+               schreibgeschuetztem OPcache-Speicher liegen (literales Array) */
+            zend_string *point_string = zval_try_get_string(zv);
+            if (UNEXPECTED(!point_string)) {
+                break;
+            }
             array_init(&xyz_arr);
-            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
+            trimmed_point_string = php_trim(point_string, NULL, 0, 3);
             php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
             coord = proj_transform_array_static(P, &xyz_arr);
-            zval_ptr_dtor(zv);
+            zend_string_release(trimmed_point_string);
+            zend_string_release(point_string);
             zval_ptr_dtor(&xyz_arr);
         } else {
             coord = proj_transform_array_static(P, zv);
@@ -554,13 +552,18 @@ ZEND_FUNCTION(proj4_transform_array)
 
         // split into into x,y,z-Array
         if (Z_TYPE_P(zv) != IS_ARRAY) {
-            // needed to make sure we have a string. Throws an error if not.
-            convert_to_string_ex(zv);
+            /* eigene Kopie statt convert_to_string_ex: zv gehoert dem Aufrufer und kann in
+               schreibgeschuetztem OPcache-Speicher liegen (literales Array) */
+            zend_string *point_string = zval_try_get_string(zv);
+            if (UNEXPECTED(!point_string)) {
+                break;
+            }
             array_init(&xyz_arr);
-            trimmed_point_string = php_trim(Z_STR_P(zv), NULL, 0, 3);
+            trimmed_point_string = php_trim(point_string, NULL, 0, 3);
             php_explode(delimiter, trimmed_point_string, &xyz_arr, LONG_MAX);
             coord = proj4_transform_array_static(srcProj, tgtProj, &xyz_arr);
-            zval_ptr_dtor(zv);
+            zend_string_release(trimmed_point_string);
+            zend_string_release(point_string);
             zval_ptr_dtor(&xyz_arr);
         } else {
             coord = proj4_transform_array_static(srcProj, tgtProj, zv);
@@ -1138,9 +1141,10 @@ ZEND_FUNCTION(proj_list_units)
         zval_ptr_dtor_nogc(&tmp);
     }
 #else
-    int *result_count;
+    int result_count = 0;
     PROJ_UNIT_INFO** units;
-    units = proj_get_units_from_database(NULL,NULL,"linear",0,result_count);
+    /* PROJ schreibt die Anzahl durch den Zeiger - vorher war hier ein uninitialisierter Zeiger */
+    units = proj_get_units_from_database(NULL,NULL,"linear",0,&result_count);
     
     for (int i = 0; units && units[i]; i++) {
         //php_printf("%9s %-16s %-16s %-16s %f\n",units[i]->code, units[i]->auth_name, units[i]->category, units[i]->name, units[i]->conv_factor);

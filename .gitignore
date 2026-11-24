@@ -33,5 +33,18 @@ tests/*/*.out
 tests/*/*.php
 tests/*/*.exp
 tests/*/*.log
+tests/*.diff
+tests/*.out
+tests/*.php
+tests/*.exp
+tests/*.log
+tests/*.mem
 tests/*/*.sh
+tests/*.sh
 nbproject
+
+# Windows-Build (phpize.bat / configure.bat / nmake)
+config.nice.bat
+configure.bat
+configure.js
+x64/

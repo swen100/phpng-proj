@@ -48,7 +48,7 @@ try {
 --EXPECTF--
 resource(%d) of type (Proj)
 resource(%d) of type (Proj)
-proj_create_operations: source_crs is not a CRS
+proj_create_operations: source_crs is not a CRS%S
 bool(false)
 proj_create_crs_to_crs_from_pj(): Argument #1 ($src_crs) must be of type resource, array given
 proj_create_crs_to_crs_from_pj(): Argument #2 ($tgtc_crs) must be of type resource, array given

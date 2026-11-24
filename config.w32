@@ -2,12 +2,20 @@
 
 ARG_WITH("proj", "PROJ module", "no");
 
-if (PHP_PROJ == "yes") {
+if (PHP_PROJ != "no") {
+
+	// --with-proj=<prefix>: Header und Bibliothek liegen in <prefix>\include bzw. <prefix>\lib.
+	// <prefix> selbst und das php_build-Verzeichnis bleiben als Fallback in der Suchliste.
+	var proj_inc = PHP_PROJ + "\\include;" + PHP_PROJ + ";" +
+	               PHP_PHP_BUILD + "\\include";
+	var proj_lib = PHP_PROJ + "\\lib;" + PHP_PROJ + ";" +
+	               PHP_PHP_BUILD + "\\lib";
+
 	if((
-                CHECK_HEADER_ADD_INCLUDE("proj_api.h", "CFLAGS_PROJ", PHP_PROJ) ||
+                CHECK_HEADER_ADD_INCLUDE("proj_api.h", "CFLAGS_PROJ", proj_inc) ||
                 // With the release of PROJ 8 the proj_api.h API is finally removed.
-                CHECK_HEADER_ADD_INCLUDE("proj.h", "CFLAGS_PROJ", PHP_PROJ)) && 
-                CHECK_LIB("proj.lib", "proj", PHP_PROJ)
+                CHECK_HEADER_ADD_INCLUDE("proj.h", "CFLAGS_PROJ", proj_inc)) &&
+                CHECK_LIB("proj.lib", "proj", proj_lib)
         ) {
             if (get_define('PHPDLL').match(/^php[78]/) != null) {
                     var old_conf_dir = configure_module_dirname;

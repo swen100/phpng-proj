@@ -40,7 +40,7 @@ $y = 5682392;
 // with proj-def
 echo "\nwith proj-def\n";
 $proj_utm32 = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs";
-$proj_gk4 = "+proj=tmerc +lat_0=0 +lon_0=12 +k=1 +x_0=4500000 +y_0=0 +ellps=bessel +datum=potsdam +nadgrids=/usr/bin/BETA2007.gsb +units=m +no_defs";
+$proj_gk4 = "+proj=tmerc +lat_0=0 +lon_0=12 +k=1 +x_0=4500000 +y_0=0 +ellps=bessel +datum=potsdam +nadgrids=de_adv_BETA2007.tif +units=m +no_defs";
 $PROJ = proj_create_crs_to_crs($proj_utm32, $proj_gk4);
 //echo proj_get_def($PROJ) . "\n";
 //proj=pipeline step inv proj=utm zone=32 ellps=GRS80 step proj=tmerc lat_0=0 lon_0=12 k=1 x_0=4500000 y_0=0 ellps=bessel
@@ -66,7 +66,7 @@ $transformed3 = proj_transform_point($PROJ3, $x, $y);
 $PROJ3 = proj_create_crs_to_crs($proj_wgs84, $proj_gk4);
 $transformed3 = proj_transform_point($PROJ3, $transformed3['x'], $transformed3['y']);
 #echo proj_get_def($PROJ3) . "\n";
-#proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step inv proj=hgridshift grids=/usr/bin/BETA2007.gsb step proj=tmerc lat_0=0 lon_0=12 k=1 x_0=4500000 y_0=0 ellps=bessel
+#proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step inv proj=hgridshift grids=de_adv_BETA2007.tif step proj=tmerc lat_0=0 lon_0=12 k=1 x_0=4500000 y_0=0 ellps=bessel
 echo 'x: ' . $transformed3['x'] . "\n";
 echo 'y: ' . $transformed3['y'] . "\n\n";
 
