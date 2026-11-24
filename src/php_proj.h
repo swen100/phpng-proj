@@ -17,9 +17,19 @@
 #include <TSRM.h>
 #endif
 
+ZEND_BEGIN_MODULE_GLOBALS(proj)
+    PJ_CONTEXT *ctx;          /* default context (NTS) or one context per thread (ZTS) */
+    zend_bool paths_changed;  /* search paths were set in this request, reset them at its end */
+ZEND_END_MODULE_GLOBALS(proj)
+
+#define PROJ_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(proj, v)
+
+#if defined(ZTS) && defined(COMPILE_DL_PROJ)
+ZEND_TSRMLS_CACHE_EXTERN()
+#endif
+
 PHP_MINIT_FUNCTION(proj);
-PHP_MSHUTDOWN_FUNCTION(proj);
-PHP_RINIT_FUNCTION(proj);
+PHP_RSHUTDOWN_FUNCTION(proj);
 PHP_MINFO_FUNCTION(proj);
 
 ZEND_FUNCTION(proj_create);

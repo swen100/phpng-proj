@@ -19,7 +19,19 @@ if ($pj === false) {
 	die(proj_get_errno_string(proj_get_errno($pj)));
 }
 var_dump(proj_is_geocent($pj));
+
+// projected CRS (UTM) is not geocentric
+var_dump(proj_is_geocent(proj_create('EPSG:25832')));
+
+// geocentric CRS and a transformation into one
+var_dump(proj_is_geocent(proj_create('EPSG:4978')));
+var_dump(proj_is_geocent(proj_create_crs_to_crs('EPSG:4326', 'EPSG:4978')));
+var_dump(proj_is_geocent(proj_create_crs_to_crs('EPSG:4326', 'EPSG:25832')));
 ?>
 --EXPECT--
+bool(true)
+bool(false)
+bool(false)
+bool(true)
 bool(true)
 bool(false)

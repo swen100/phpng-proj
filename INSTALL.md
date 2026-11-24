@@ -13,6 +13,7 @@ cd phpng-proj
 # Build and install the extension
 phpize
 ./configure
+# PROJ in another prefix: ./configure --with-proj=/opt/proj
 
 # this copies the proj.so file to the php-library directory eg.: /usr/lib/php7/extensions/ 
 make install

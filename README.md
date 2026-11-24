@@ -2,7 +2,7 @@
 
 A php extension to be usable with PHP7+ and next generation of libProj (6+).
 
-[![Build Status](https://app.travis-ci.com/swen100/phpng-proj.svg?branch=master)](https://app.travis-ci.com/swen100/phpng-proj)
+[![CI](https://github.com/swen100/phpng-proj/actions/workflows/ci.yml/badge.svg)](https://github.com/swen100/phpng-proj/actions/workflows/ci.yml)
 
 ### Installation
 
@@ -18,8 +18,11 @@ Create a Proj resource coordinate system object from the projection definition s
 **resource proj_create_crs_to_crs(string srcCrs, string tgtCrs);**
 Create a Proj resource coordinate system object from the source SRID and target SRID.
 
-**resource proj_create_crs_to_crs_from_pj(resource srcPj, resource tgtPj);**
+**resource proj_create_crs_to_crs_from_pj(resource srcPj, resource tgtPj [, resource area [, string option]]);**
 Create a Proj resource coordinate system object from the source PROJ and target PROJ.
+`option` is passed to PROJ, e.g. `"ALLOW_BALLPARK=NO"`.
+
+All `proj_create*` functions return false and emit a warning with the reason if PROJ cannot create the object.
 
 **resource proj_area_create();**
 Create an area of use. Such an area of use is to be passed to proj_create_crs_to_crs() to specify the area of use for the choice of relevant coordinate operations.
@@ -29,16 +32,19 @@ Set the bounding box of the area of use. In the case of an area of use crossing 
 
 **array proj_transform_point(resource pj, mixed x, mixed y, mixed z);**
 Transform the x/y/z points from the previously set coordinate systems (source, target) within projection.
-x, y and z can be double, int or a numeric string.
+x, y and z can be double, int or a numeric string. z defaults to 0.
+Returns false if PROJ cannot transform the point.
 
 **array proj_transform_string(resource pj, string xyz);**
 Transform the x/y[/z] string from the previously set coordinate systems (source, target) within projection.
+Points are separated by commas, e.g. `"11 51, 11.5 51.5 20"`. Each point is handled like in proj_transform_array().
 
 **array proj_transform_array(resource pj, array xyz);**
 Transform the x/y[/z] array from the previously set coordinate systems (source, target) within projection.
 The array can contain strings with x,y,z-values or also an array with x,y[,z]-values where x, y and z can be of type double, int or numeric string.
+Values in a string may be separated by any amount of whitespace. A point that has fewer than two values or cannot be transformed is returned as false; the other points are still transformed. The input array is not modified.
 
-**void proj_destroy(resource pj);**
+**void proj_free(resource pj);**
 Frees all resources associated with pj.
 
 ### Advanced Functions
@@ -47,7 +53,7 @@ Frees all resources associated with pj.
 Returns true if the output coordinate system is geographic (proj=latlong).
 
 **boolean proj_is_geocent(resource pj);**
-Returns true if the output coordinate system is geocentric (proj=geocent).
+Returns true if the output coordinate system is geocentric (proj=geocent, a geocentric CRS, or a transformation whose target CRS is geocentric).
 
 **string proj_get_def(resource pj);**
 Returns the PROJ initialization string suitable for use with proj_create() that would produce this coordinate system, but with the definition expanded as much as possible (for instance +init= and +datum= definitions).
@@ -72,11 +78,14 @@ Returns an integer value that can be used for the proj_errno_string(int) functio
 **array proj_get_info();**
 Returns an array with informations about the current PROJ library.
 
+**bool proj_context_set_search_paths(array paths);**
+Sets the directories where PROJ looks for proj.db and grid files. An empty array restores the default. The paths apply to the current request only.
+
 **string proj_get_release();**
 Returns an internal string describing the release version.
 
 **array proj_list_units();**
-Returns an array of globally defined distance units.
+Returns an array of globally defined distance units. With PROJ 7.1 and newer the units come from the PROJ database and have the fields name, auth_name, category and conv_factor; before that, name, to_meter and factor.
 
 **array proj_list_ellps();**
 Returns an array of globally defined ellipsoids.

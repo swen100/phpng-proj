@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: phpize, php-config
+      - run: sudo apt-get update && sudo apt-get install -y libproj-dev
+      - run: phpize && ./configure && make -j"$(nproc)"
+      - run: make test NO_INTERACTION=1 REPORT_EXIT_STATUS=1
+      - run: php -d extension=$PWD/modules/proj.so phpng-proj.php

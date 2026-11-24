@@ -20,4 +20,6 @@ var_dump($pj);
 --EXPECTF--
 resource(4) of type (Proj)
 proj_create: Error %i (%s)%S
+
+Warning: proj_create(): %s in %s on line %d
 bool(false)
