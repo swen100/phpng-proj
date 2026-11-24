@@ -8,7 +8,7 @@
 #ifndef PHP_PROJ_H
 #define PHP_PROJ_H 1
 
-#define PHP_PROJ_VERSION "3.0.3"
+#define PHP_PROJ_VERSION "3.1.0"
 #define PHP_PROJ_EXTNAME "proj"
 #define PHP_PROJ_RES_NAME "Proj"
 #define PHP_PROJ_AREA_RES_NAME "Area"
